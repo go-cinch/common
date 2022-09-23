@@ -54,9 +54,9 @@ type periodTaskHandler struct {
 }
 
 type Payload struct {
-	Name    string `json:"name"`
-	Uid     string `json:"uid"`
-	Payload string `json:"payload"`
+	Category string `json:"category"`
+	Uid      string `json:"uid"`
+	Payload  string `json:"payload"`
 }
 
 func (p Payload) String() (str string) {
@@ -68,9 +68,9 @@ func (p Payload) String() (str string) {
 func (p periodTaskHandler) ProcessTask(ctx context.Context, t *asynq.Task) (err error) {
 	uid := uuid.NewString()
 	payload := Payload{
-		Name:    t.Type(),
-		Uid:     t.ResultWriter().TaskID(),
-		Payload: string(t.Payload()),
+		Category: t.Type(),
+		Uid:      t.ResultWriter().TaskID(),
+		Payload:  string(t.Payload()),
 	}
 	defer func() {
 		if err != nil {
