@@ -197,7 +197,7 @@ func (wk Worker) Once(options ...func(*RunOptions)) (err error) {
 		err = errors.WithStack(ErrUuidNil)
 		return
 	}
-	t := asynq.NewTask(ops.name+".once", []byte(ops.payload), asynq.TaskID(ops.uid))
+	t := asynq.NewTask(ops.category+".once", []byte(ops.payload), asynq.TaskID(ops.uid))
 	taskOpts := []asynq.Option{
 		asynq.Queue(wk.ops.group),
 		asynq.MaxRetry(wk.ops.maxRetry),
@@ -239,7 +239,7 @@ func (wk Worker) Cron(options ...func(*RunOptions)) (err error) {
 	}
 	t := periodTask{
 		Expr:     ops.expr,
-		Name:     ops.name + ".cron",
+		Name:     ops.category + ".cron",
 		Uid:      ops.uid,
 		Payload:  ops.payload,
 		Next:     next,

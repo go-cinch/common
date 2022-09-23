@@ -86,7 +86,7 @@ func getOptionsOrSetDefault(options *Options) *Options {
 
 type RunOptions struct {
 	uid       string
-	name      string
+	category  string
 	payload   string
 	expr      string         // only period task
 	in        *time.Duration // only once task
@@ -103,9 +103,9 @@ func WithRunUuid(s string) func(*RunOptions) {
 	}
 }
 
-func WithRunName(s string) func(*RunOptions) {
+func WithRunCategory(s string) func(*RunOptions) {
 	return func(options *RunOptions) {
-		getRunOptionsOrSetDefault(options).name = s
+		getRunOptionsOrSetDefault(options).category = s
 	}
 }
 
@@ -164,8 +164,8 @@ func WithRunTimeout(second int) func(*RunOptions) {
 func getRunOptionsOrSetDefault(options *RunOptions) *RunOptions {
 	if options == nil {
 		return &RunOptions{
-			name:    "task.queue",
-			timeout: 60,
+			category: "category",
+			timeout:  60,
 		}
 	}
 	return options
