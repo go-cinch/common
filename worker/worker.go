@@ -67,8 +67,9 @@ func (p Payload) String() (str string) {
 
 func (p periodTaskHandler) ProcessTask(ctx context.Context, t *asynq.Task) (err error) {
 	uid := uuid.NewString()
+	category := strings.TrimSuffix(strings.TrimSuffix(t.Type(), ".once"), ".cron")
 	payload := Payload{
-		Category: t.Type(),
+		Category: category,
 		Uid:      t.ResultWriter().TaskID(),
 		Payload:  string(t.Payload()),
 	}
