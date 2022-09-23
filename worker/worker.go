@@ -1,4 +1,4 @@
-package task
+package worker
 
 import (
 	"bytes"
@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-type Task struct {
+type Worker struct {
 	ops       Options
 	redis     redis.UniversalClient
 	redisOpt  asynq.RedisConnOpt
@@ -50,7 +50,7 @@ func (p *periodTask) FromString(str string) {
 }
 
 type periodTaskHandler struct {
-	tk Task
+	tk Worker
 }
 
 type Payload struct {
@@ -119,13 +119,13 @@ func (p periodTaskHandler) httpCallback(ctx context.Context, payload Payload) (e
 	return
 }
 
-// New is create a task, implemented by asynq: https://github.com/hibiken/asynq
-func New(options ...func(*Options)) (tk *Task) {
+// New is create a task worker, implemented by asynq: https://github.com/hibiken/asynq
+func New(options ...func(*Options)) (tk *Worker) {
 	ops := getOptionsOrSetDefault(nil)
 	for _, f := range options {
 		f(ops)
 	}
-	tk = &Task{}
+	tk = &Worker{}
 	if ops.redisUri == "" {
 		tk.Error = errors.WithStack(ErrRedisNil)
 		return
@@ -188,7 +188,7 @@ func New(options ...func(*Options)) (tk *Task) {
 	return
 }
 
-func (tk Task) Once(options ...func(*RunOptions)) (err error) {
+func (wk Worker) Once(options ...func(*RunOptions)) (err error) {
 	ops := getRunOptionsOrSetDefault(nil)
 	for _, f := range options {
 		f(ops)
@@ -199,8 +199,8 @@ func (tk Task) Once(options ...func(*RunOptions)) (err error) {
 	}
 	t := asynq.NewTask(ops.name+".once", []byte(ops.payload), asynq.TaskID(ops.uid))
 	taskOpts := []asynq.Option{
-		asynq.Queue(tk.ops.group),
-		asynq.MaxRetry(tk.ops.maxRetry),
+		asynq.Queue(wk.ops.group),
+		asynq.MaxRetry(wk.ops.maxRetry),
 		asynq.Timeout(time.Duration(ops.timeout) * time.Second),
 	}
 	if ops.maxRetry > 0 {
@@ -209,7 +209,7 @@ func (tk Task) Once(options ...func(*RunOptions)) (err error) {
 	if ops.retention > 0 {
 		taskOpts = append(taskOpts, asynq.Retention(time.Duration(ops.retention)*time.Second))
 	} else {
-		taskOpts = append(taskOpts, asynq.Retention(time.Duration(tk.ops.retention)*time.Second))
+		taskOpts = append(taskOpts, asynq.Retention(time.Duration(wk.ops.retention)*time.Second))
 	}
 	if ops.in != nil {
 		taskOpts = append(taskOpts, asynq.ProcessIn(*ops.in))
@@ -218,11 +218,11 @@ func (tk Task) Once(options ...func(*RunOptions)) (err error) {
 	} else if ops.now {
 		taskOpts = append(taskOpts, asynq.ProcessIn(time.Second))
 	}
-	_, err = tk.client.Enqueue(t, taskOpts...)
+	_, err = wk.client.Enqueue(t, taskOpts...)
 	return
 }
 
-func (tk Task) Cron(options ...func(*RunOptions)) (err error) {
+func (wk Worker) Cron(options ...func(*RunOptions)) (err error) {
 	ops := getRunOptionsOrSetDefault(nil)
 	for _, f := range options {
 		f(ops)
@@ -246,7 +246,7 @@ func (tk Task) Cron(options ...func(*RunOptions)) (err error) {
 		MaxRetry: ops.maxRetry,
 		Timeout:  ops.timeout,
 	}
-	_, err = tk.redis.HSet(context.Background(), tk.ops.redisPeriodKey, ops.uid, t.String()).Result()
+	_, err = wk.redis.HSet(context.Background(), wk.ops.redisPeriodKey, ops.uid, t.String()).Result()
 	if err != nil {
 		err = errors.WithStack(ErrSaveCron)
 		return
@@ -254,53 +254,53 @@ func (tk Task) Cron(options ...func(*RunOptions)) (err error) {
 	return
 }
 
-func (tk Task) Remove(uid string) (err error) {
+func (wk Worker) Remove(uid string) (err error) {
 	var ok bool
 	for {
-		ok = tk.lock.Lock()
+		ok = wk.lock.Lock()
 		if ok {
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	defer tk.lock.Unlock()
-	tk.redis.HDel(context.Background(), tk.ops.redisPeriodKey, uid)
+	defer wk.lock.Unlock()
+	wk.redis.HDel(context.Background(), wk.ops.redisPeriodKey, uid)
 
-	err = tk.inspector.DeleteTask(tk.ops.group, uid)
+	err = wk.inspector.DeleteTask(wk.ops.group, uid)
 	return
 }
 
-func (tk Task) processed(uid string) {
+func (wk Worker) processed(uid string) {
 	var ok bool
 	for {
-		ok = tk.lock.Lock()
+		ok = wk.lock.Lock()
 		if ok {
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	defer tk.lock.Unlock()
+	defer wk.lock.Unlock()
 	ctx := context.Background()
-	t, e := tk.redis.HGet(ctx, tk.ops.redisPeriodKey, uid).Result()
+	t, e := wk.redis.HGet(ctx, wk.ops.redisPeriodKey, uid).Result()
 	if e == nil || e != redis.Nil {
 		var item periodTask
 		item.FromString(t)
 		item.Processed++
-		tk.redis.HSet(ctx, tk.ops.redisPeriodKey, uid, item.String())
+		wk.redis.HSet(ctx, wk.ops.redisPeriodKey, uid, item.String())
 	}
 	return
 }
 
-func (tk Task) scan() {
+func (wk Worker) scan() {
 	ctx := context.Background()
-	ok := tk.lock.Lock()
+	ok := wk.lock.Lock()
 	if !ok {
 		return
 	}
-	defer tk.lock.Unlock()
-	m, _ := tk.redis.HGetAll(ctx, tk.ops.redisPeriodKey).Result()
-	p := tk.redis.Pipeline()
-	ops := tk.ops
+	defer wk.lock.Unlock()
+	m, _ := wk.redis.HGetAll(ctx, wk.ops.redisPeriodKey).Result()
+	p := wk.redis.Pipeline()
+	ops := wk.ops
 	for _, v := range m {
 		var item periodTask
 		item.FromString(v)
@@ -325,11 +325,11 @@ func (tk Task) scan() {
 			taskOpts = append(taskOpts, asynq.Retention(time.Duration(retention)*time.Second))
 		}
 		taskOpts = append(taskOpts, asynq.ProcessAt(time.Unix(item.Next, 0)))
-		_, err := tk.client.Enqueue(t, taskOpts...)
+		_, err := wk.client.Enqueue(t, taskOpts...)
 		// enqueue success, update next
 		if err == nil {
 			item.Next = next
-			p.HSet(ctx, tk.ops.redisPeriodKey, item.Uid, item.String())
+			p.HSet(ctx, wk.ops.redisPeriodKey, item.Uid, item.String())
 		}
 	}
 	// batch save to cache
@@ -337,8 +337,8 @@ func (tk Task) scan() {
 	return
 }
 
-func (tk Task) clearArchived() {
-	list, err := tk.inspector.ListArchivedTasks(tk.ops.group, asynq.Page(1), asynq.PageSize(100))
+func (wk Worker) clearArchived() {
+	list, err := wk.inspector.ListArchivedTasks(wk.ops.group, asynq.Page(1), asynq.PageSize(100))
 	if err != nil {
 		return
 	}
@@ -352,7 +352,7 @@ func (tk Task) clearArchived() {
 		var flag bool
 		if strings.HasSuffix(item.Type, ".cron") {
 			// cron task
-			t, e := tk.redis.HGet(ctx, tk.ops.redisPeriodKey, uid).Result()
+			t, e := wk.redis.HGet(ctx, wk.ops.redisPeriodKey, uid).Result()
 			if e == nil || e != redis.Nil {
 				var task periodTask
 				task.FromString(t)
@@ -383,7 +383,7 @@ func (tk Task) clearArchived() {
 			}
 		}
 		if flag {
-			tk.inspector.DeleteTask(tk.ops.group, uid)
+			wk.inspector.DeleteTask(wk.ops.group, uid)
 		}
 	}
 }

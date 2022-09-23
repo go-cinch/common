@@ -1,4 +1,4 @@
-module github.com/go-cinch/common/task
+module github.com/go-cinch/common/worker
 
 go 1.18
 
