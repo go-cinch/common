@@ -119,8 +119,8 @@ func (p periodTaskHandler) httpCallback(ctx context.Context, payload Payload) (e
 	return
 }
 
-// NewTask is new a task, implemented by asynq: https://github.com/hibiken/asynq
-func NewTask(options ...func(*Options)) (tk *Task) {
+// New is create a task, implemented by asynq: https://github.com/hibiken/asynq
+func New(options ...func(*Options)) (tk *Task) {
 	ops := getOptionsOrSetDefault(nil)
 	for _, f := range options {
 		f(ops)

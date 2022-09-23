@@ -8,9 +8,9 @@ import (
 	"time"
 )
 
-func TestNewTask(t *testing.T) {
+func TestTask(t *testing.T) {
 	// cron task
-	tk1 := NewTask()
+	tk1 := New()
 	// example 1: run at the 5th minute of each hour
 	tk1.Cron(
 		WithRunUuid("order1"),
@@ -43,7 +43,7 @@ func TestNewTask(t *testing.T) {
 	)
 
 	// once task
-	tk2 := NewTask(
+	tk2 := New(
 		WithGroup("task.once"),
 		WithHandler(func(ctx context.Context, p Payload) error {
 			time.Sleep(time.Minute)
