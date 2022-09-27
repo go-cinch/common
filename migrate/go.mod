@@ -3,7 +3,7 @@ module github.com/go-cinch/common/migrate
 go 1.18
 
 require (
-	github.com/go-cinch/common/log v0.0.0-20220915041046-67146b6fe8fe
+	github.com/go-cinch/common/log v0.0.0-20220927061933-ccf4ca4bccbe
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/rubenv/sql-migrate v1.2.0
 )

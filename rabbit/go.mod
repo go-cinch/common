@@ -3,7 +3,7 @@ module github.com/go-cinch/common/rabbit
 go 1.18
 
 require (
-	github.com/go-cinch/common/log v0.0.1
+	github.com/go-cinch/common/log v0.0.0-20220927061933-ccf4ca4bccbe
 	github.com/google/uuid v1.3.0
 	github.com/houseofcat/turbocookedrabbit/v2 v2.3.0
 	github.com/pkg/errors v0.9.1
