@@ -6,6 +6,12 @@ type Options struct {
 	level            Level
 	logger           log.Logger
 	loggerMessageKey string
+	caller           bool
+	callerSkip       []string
+	callerSource     bool
+	callerPrefix     string
+	callerLevel      int
+	callerVersion    bool
 }
 
 func (o Options) Level() Level {
@@ -40,6 +46,11 @@ func getOptionsOrSetDefault(options *Options) *Options {
 			level:            DebugLevel,
 			logger:           log.DefaultLogger,
 			loggerMessageKey: log.DefaultMessageKey,
+			caller:           true,
+			callerSkip:       []string{"gorm.io", "go-kratos", "golang.org/x/sync"},
+			callerSource:     false,
+			callerLevel:      2,
+			callerVersion:    true,
 		}
 	}
 	return options
