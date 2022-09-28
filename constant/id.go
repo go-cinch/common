@@ -1,7 +1,7 @@
 package constant
 
 const (
-	UI0 uint64 = 0
+	UI0 uint64 = iota
 	UI1
 	UI2
 	UI3
@@ -25,7 +25,7 @@ const (
 )
 
 const (
-	I0 int64 = 0
+	I0 int64 = iota
 	I1
 	I2
 	I3
