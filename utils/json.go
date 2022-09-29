@@ -5,16 +5,12 @@ import (
 	"github.com/go-cinch/common/log"
 )
 
-func Struct2Json(to *string, from interface{}) {
+func Struct2Json(from interface{}) string {
 	str, err := json.Marshal(from)
 	if err != nil {
 		log.Warn("Struct2Json, can not convert: %v", err)
 	}
-	if to == nil {
-		log.Warn("Struct2Json, target is empty")
-		return
-	}
-	*to = string(str)
+	return string(str)
 }
 
 func Json2Struct(to interface{}, from string) {
@@ -25,7 +21,6 @@ func Json2Struct(to interface{}, from string) {
 }
 
 func Struct2StructByJson(to interface{}, from interface{}) {
-	var str string
-	Struct2Json(&str, from)
+	str := Struct2Json(from)
 	Json2Struct(to, str)
 }
