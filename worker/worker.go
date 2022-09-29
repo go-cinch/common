@@ -217,7 +217,7 @@ func (wk Worker) Once(options ...func(*RunOptions)) (err error) {
 	} else if ops.at != nil {
 		taskOpts = append(taskOpts, asynq.ProcessAt(*ops.at))
 	} else if ops.now {
-		taskOpts = append(taskOpts, asynq.ProcessIn(time.Second))
+		taskOpts = append(taskOpts, asynq.ProcessIn(time.Millisecond))
 	}
 	_, err = wk.client.Enqueue(t, taskOpts...)
 	return
