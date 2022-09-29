@@ -47,7 +47,7 @@ func getOptionsOrSetDefault(options *Options) *Options {
 			logger:           log.DefaultLogger,
 			loggerMessageKey: log.DefaultMessageKey,
 			caller:           true,
-			callerSkip:       []string{"gorm.io", "go-kratos", "golang.org/x/sync"},
+			callerSkip:       []string{"gorm.io", "go-kratos", "golang.org/x/sync", "go-cinch/common"},
 			callerSource:     false,
 			callerLevel:      2,
 			callerVersion:    true,
