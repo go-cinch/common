@@ -1,8 +1,8 @@
 package id
 
-// New can get a unique code by id(You need to ensure that id is unique)
-func New(id uint64, options ...func(*Options)) string {
-	ops := getOptionsOrSetDefault(nil)
+// NewCode can get a unique code by id(You need to ensure that id is unique)
+func NewCode(id uint64, options ...func(*CodeOptions)) string {
+	ops := getCodeOptionsOrSetDefault(nil)
 	for _, f := range options {
 		f(ops)
 	}

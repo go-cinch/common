@@ -1,6 +1,6 @@
 package id
 
-type Options struct {
+type CodeOptions struct {
 	chars []rune
 	n1    int
 	n2    int
@@ -8,45 +8,45 @@ type Options struct {
 	salt  uint64
 }
 
-func WithChars(arr []rune) func(*Options) {
-	return func(options *Options) {
+func WithCodeChars(arr []rune) func(*CodeOptions) {
+	return func(options *CodeOptions) {
 		if len(arr) > 0 {
-			getOptionsOrSetDefault(options).chars = arr
+			getCodeOptionsOrSetDefault(options).chars = arr
 		}
 	}
 }
 
-func WithN1(n int) func(*Options) {
-	return func(options *Options) {
-		getOptionsOrSetDefault(options).n1 = n
+func WithCodeN1(n int) func(*CodeOptions) {
+	return func(options *CodeOptions) {
+		getCodeOptionsOrSetDefault(options).n1 = n
 	}
 }
 
-func WithN2(n int) func(*Options) {
-	return func(options *Options) {
-		getOptionsOrSetDefault(options).n2 = n
+func WithCodeN2(n int) func(*CodeOptions) {
+	return func(options *CodeOptions) {
+		getCodeOptionsOrSetDefault(options).n2 = n
 	}
 }
 
-func WithL(l int) func(*Options) {
-	return func(options *Options) {
+func WithCodeL(l int) func(*CodeOptions) {
+	return func(options *CodeOptions) {
 		if l > 0 {
-			getOptionsOrSetDefault(options).l = l
+			getCodeOptionsOrSetDefault(options).l = l
 		}
 	}
 }
 
-func WithSalt(salt uint64) func(*Options) {
-	return func(options *Options) {
+func WithCodeSalt(salt uint64) func(*CodeOptions) {
+	return func(options *CodeOptions) {
 		if salt > 0 {
-			getOptionsOrSetDefault(options).salt = salt
+			getCodeOptionsOrSetDefault(options).salt = salt
 		}
 	}
 }
 
-func getOptionsOrSetDefault(options *Options) *Options {
+func getCodeOptionsOrSetDefault(options *CodeOptions) *CodeOptions {
 	if options == nil {
-		return &Options{
+		return &CodeOptions{
 			// base string set, remove 0,1,I,O,U,Z
 			chars: []rune{
 				'2', '3', '4', '5', '6',
