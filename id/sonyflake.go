@@ -35,6 +35,10 @@ func NewSonyflake(options ...func(*SonyflakeOptions)) *Sonyflake {
 	if ins == nil {
 		sf.Error = errors.Errorf("create snoyflake failed")
 	}
+	_, err := ins.NextID()
+	if err != nil {
+		sf.Error = errors.Errorf("invalid start time")
+	}
 	sf.sf = ins
 	return sf
 }
