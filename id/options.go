@@ -1,5 +1,7 @@
 package id
 
+import "time"
+
 type CodeOptions struct {
 	chars []rune
 	n1    int
@@ -64,6 +66,37 @@ func getCodeOptionsOrSetDefault(options *CodeOptions) *CodeOptions {
 			l: 8,
 			// random number
 			salt: 123567369,
+		}
+	}
+	return options
+}
+
+type SonyflakeOptions struct {
+	machineId uint16
+	startTime time.Time
+}
+
+func WithSonyflakeMachineId(id uint16) func(*SonyflakeOptions) {
+	return func(options *SonyflakeOptions) {
+		if id > 0 {
+			getSonyflakeOptionsOrSetDefault(options).machineId = id
+		}
+	}
+}
+
+func WithSonyflakeStartTime(startTime time.Time) func(*SonyflakeOptions) {
+	return func(options *SonyflakeOptions) {
+		if !startTime.IsZero() {
+			getSonyflakeOptionsOrSetDefault(options).startTime = startTime
+		}
+	}
+}
+
+func getSonyflakeOptionsOrSetDefault(options *SonyflakeOptions) *SonyflakeOptions {
+	if options == nil {
+		return &SonyflakeOptions{
+			machineId: 1,
+			startTime: time.Date(2022, 10, 10, 0, 0, 0, 0, time.UTC),
 		}
 	}
 	return options
