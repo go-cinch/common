@@ -17,13 +17,13 @@ const (
 
 // Page array data page info
 type Page struct {
-	ctx      context.Context
-	PageNum  uint64 `json:"pageNum"`  // current page
-	PageSize uint64 `json:"pageSize"` // page per count
-	Total    int64  `json:"total"`    // all data count
-	Disable  bool   `json:"disable"`  // disable pagination, query all data
-	Count    bool   `json:"count"`    // not use 'SELECT count(*) FROM ...' before 'SELECT * FROM ...'
-	Primary  string `json:"primary"`  // When there is a large amount of data, limit is optimized by specifying a field (the field is usually self incremented ID or indexed), which can improve the query efficiency (if it is not transmitted, it will not be optimized)
+	ctx     context.Context
+	Num     uint64 `json:"num"`     // current page
+	Size    uint64 `json:"size"`    // page per count
+	Total   int64  `json:"total"`   // all data count
+	Disable bool   `json:"disable"` // disable pagination, query all data
+	Count   bool   `json:"count"`   // not use 'SELECT count(*) FROM ...' before 'SELECT * FROM ...'
+	Primary string `json:"primary"` // When there is a large amount of data, limit is optimized by specifying a field (the field is usually self incremented ID or indexed), which can improve the query efficiency (if it is not transmitted, it will not be optimized)
 }
 
 func (page *Page) WithContext(ctx context.Context) *Page {
@@ -44,12 +44,12 @@ func (page *Page) Query(db *gorm.DB) (rp *Query) {
 // Limit calc limit/offset
 func (page *Page) Limit() (int, int) {
 	total := page.Total
-	pageNum := page.PageNum
-	pageSize := page.PageSize
-	if page.PageNum < MinNum {
+	pageNum := page.Num
+	pageSize := page.Size
+	if page.Num < MinNum {
 		pageNum = MinNum
 	}
-	if page.PageSize < MinSize || page.PageSize > MaxSize {
+	if page.Size < MinSize || page.Size > MaxSize {
 		pageSize = Size
 	}
 
@@ -58,11 +58,9 @@ func (page *Page) Limit() (int, int) {
 	if uint64(total)%pageSize == 0 {
 		maxPageNum = uint64(total) / pageSize
 	}
-	// maxPageNum must be greater than 0
 	if maxPageNum < MinNum {
 		maxPageNum = MinNum
 	}
-	// pageNum must be less than or equal to total
 	if total > 0 && pageNum > uint64(total) {
 		pageNum = maxPageNum
 	}
@@ -70,20 +68,20 @@ func (page *Page) Limit() (int, int) {
 	limit := pageSize
 	offset := limit * (pageNum - 1)
 	// PageNum less than 1 is set as page 1 data
-	if page.PageNum < 1 {
+	if page.Num < 1 {
 		offset = 0
 	}
 
 	// PageNum greater than maxPageNum is set as empty data: offset=last
-	if total > 0 && page.PageNum > maxPageNum {
+	if total > 0 && page.Num > maxPageNum {
 		pageNum = maxPageNum + 1
 		offset = limit * maxPageNum
 	}
 
-	page.PageNum = pageNum
-	page.PageSize = pageSize
+	page.Num = pageNum
+	page.Size = pageSize
 	if page.Disable {
-		page.PageSize = uint64(total)
+		page.Size = uint64(total)
 	}
 	// gorm v2 interface is int
 	return int(limit), int(offset)
