@@ -96,6 +96,9 @@ type Query struct {
 func (q *Query) Find(model interface{}) {
 	db := q.db
 	page := q.page
+	if _, ok := db.Statement.Clauses["ORDER BY"]; !ok {
+		db = db.Order(page.Primary)
+	}
 	ctx := page.ctx
 	rv := reflect.ValueOf(model)
 	if rv.Kind() != reflect.Ptr || (rv.IsNil() || rv.Elem().Kind() != reflect.Slice) {
@@ -150,6 +153,9 @@ func (q *Query) Find(model interface{}) {
 func (q *Query) Scan(model interface{}) {
 	db := q.db
 	page := q.page
+	if _, ok := db.Statement.Clauses["ORDER BY"]; !ok {
+		db = db.Order(page.Primary)
+	}
 	ctx := page.ctx
 	rv := reflect.ValueOf(model)
 	if rv.Kind() != reflect.Ptr || (rv.IsNil() || rv.Elem().Kind() != reflect.Slice) {
