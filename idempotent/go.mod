@@ -1,4 +1,4 @@
-module github.com/go-cinch/common/idempotence
+module github.com/go-cinch/common/idempotent
 
 go 1.18
 

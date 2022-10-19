@@ -1,4 +1,4 @@
-package idempotence
+package idempotent
 
 import (
 	"github.com/go-redis/redis/v8"
