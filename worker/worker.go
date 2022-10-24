@@ -29,7 +29,7 @@ type Worker struct {
 
 type periodTask struct {
 	Expr      string `json:"expr"` // cron expr github.com/robfig/cron/v3
-	Name      string `json:"group"`
+	Group     string `json:"group"`
 	Uid       string `json:"uid"`
 	Payload   string `json:"payload"`
 	Next      int64  `json:"next"`      // next schedule unix timestamp
@@ -54,9 +54,9 @@ type periodTaskHandler struct {
 }
 
 type Payload struct {
-	Category string `json:"category"`
-	Uid      string `json:"uid"`
-	Payload  string `json:"payload"`
+	Group   string `json:"group"`
+	Uid     string `json:"uid"`
+	Payload string `json:"payload"`
 }
 
 func (p Payload) String() (str string) {
@@ -67,11 +67,11 @@ func (p Payload) String() (str string) {
 
 func (p periodTaskHandler) ProcessTask(ctx context.Context, t *asynq.Task) (err error) {
 	uid := uuid.NewString()
-	category := strings.TrimSuffix(strings.TrimSuffix(t.Type(), ".once"), ".cron")
+	group := strings.TrimSuffix(strings.TrimSuffix(t.Type(), ".once"), ".cron")
 	payload := Payload{
-		Category: category,
-		Uid:      t.ResultWriter().TaskID(),
-		Payload:  string(t.Payload()),
+		Group:   group,
+		Uid:     t.ResultWriter().TaskID(),
+		Payload: string(t.Payload()),
 	}
 	defer func() {
 		if err != nil {
@@ -198,7 +198,7 @@ func (wk Worker) Once(options ...func(*RunOptions)) (err error) {
 		err = errors.WithStack(ErrUuidNil)
 		return
 	}
-	t := asynq.NewTask(ops.category+".once", []byte(ops.payload), asynq.TaskID(ops.uid))
+	t := asynq.NewTask(ops.group+".once", []byte(ops.payload), asynq.TaskID(ops.uid))
 	taskOpts := []asynq.Option{
 		asynq.Queue(wk.ops.group),
 		asynq.MaxRetry(wk.ops.maxRetry),
@@ -240,7 +240,7 @@ func (wk Worker) Cron(options ...func(*RunOptions)) (err error) {
 	}
 	t := periodTask{
 		Expr:     ops.expr,
-		Name:     ops.category + ".cron",
+		Group:    ops.group + ".cron",
 		Uid:      ops.uid,
 		Payload:  ops.payload,
 		Next:     next,
@@ -306,7 +306,7 @@ func (wk Worker) scan() {
 		var item periodTask
 		item.FromString(v)
 		next, _ := getNext(item.Expr, item.Next)
-		t := asynq.NewTask(item.Name, []byte(item.Payload), asynq.TaskID(item.Uid))
+		t := asynq.NewTask(item.Group, []byte(item.Payload), asynq.TaskID(item.Uid))
 		taskOpts := []asynq.Option{
 			asynq.Queue(ops.group),
 			asynq.MaxRetry(ops.maxRetry),
