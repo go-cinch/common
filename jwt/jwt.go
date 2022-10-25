@@ -7,6 +7,7 @@ import (
 	"github.com/go-kratos/kratos/v2/transport"
 	jwtV4 "github.com/golang-jwt/jwt/v4"
 	"github.com/golang-module/carbon/v2"
+	gmd "google.golang.org/grpc/metadata"
 	"strings"
 )
 
@@ -43,25 +44,35 @@ func NewServerContextByUser(ctx context.Context, u User) context.Context {
 	return ctx
 }
 
+func NewServerContextByReplyMD(ctx context.Context, md gmd.MD) context.Context {
+	u := new(User)
+	v1 := md.Get("x-md-global-code")
+	if len(v1) == 1 {
+		u.Code = v1[0]
+	}
+	v2 := md.Get("x-md-global-platform")
+	if len(v2) == 1 {
+		u.Platform = v2[0]
+	}
+	return NewServerContextByUser(ctx, *u)
+}
+
 func FromServerContext(ctx context.Context) (u *User) {
 	u = new(User)
 	if v, ok := ctx.Value(user{}).(*User); ok {
 		copierx.Copy(&u, v)
-	}
-	return
-}
-
-func FromClientContext(ctx context.Context) (u *User) {
-	u = new(User)
-	if md, ok := metadata.FromServerContext(ctx); ok {
+	} else if md, ok2 := metadata.FromServerContext(ctx); ok2 {
 		u.Code = md.Get("x-md-global-code")
 		u.Platform = md.Get("x-md-global-platform")
+		u.Token = TokenFromServerContext(ctx)
 	}
-	u.Token = TokenFromClientContext(ctx)
+	if u.Token == "" {
+		u.Token = TokenFromServerContext(ctx)
+	}
 	return
 }
 
-func TokenFromClientContext(ctx context.Context) (token string) {
+func TokenFromServerContext(ctx context.Context) (token string) {
 	if tr, ok := transport.FromServerContext(ctx); ok {
 		auths := strings.SplitN(tr.RequestHeader().Get("Authorization"), " ", 2)
 		if len(auths) == 2 && strings.EqualFold(auths[0], "Bearer") {
@@ -76,8 +87,13 @@ func TokenFromClientContext(ctx context.Context) (token string) {
 	return
 }
 
-func AppendToClientContext(ctx context.Context) context.Context {
-	u := FromClientContext(ctx)
+func AppendToClientContext(ctx context.Context, us ...User) context.Context {
+	var u *User
+	if len(us) > 0 {
+		u = &us[0]
+	} else {
+		u = FromServerContext(ctx)
+	}
 	ctx = metadata.AppendToClientContext(
 		ctx,
 		"x-md-global-code", u.Code,
@@ -85,6 +101,22 @@ func AppendToClientContext(ctx context.Context) context.Context {
 		"x-md-global-jwt", u.Token,
 	)
 	return ctx
+}
+
+func AppendToReplayHeader(ctx context.Context, us ...User) {
+	var u *User
+	if len(us) > 0 {
+		u = &us[0]
+	} else {
+		u = FromServerContext(ctx)
+	}
+	if tr, ok := transport.FromServerContext(ctx); ok {
+		if tr.ReplyHeader() != nil {
+			tr.ReplyHeader().Set("x-md-global-code", u.Code)
+			tr.ReplyHeader().Set("x-md-global-platform", u.Platform)
+		}
+	}
+	return
 }
 
 func (u *User) CreateToken(key, duration string) (token string, expires carbon.Carbon) {
