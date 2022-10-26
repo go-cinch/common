@@ -103,7 +103,7 @@ func AppendToClientContext(ctx context.Context, us ...User) context.Context {
 	return ctx
 }
 
-func AppendToReplayHeader(ctx context.Context, us ...User) {
+func AppendToReplyHeader(ctx context.Context, us ...User) {
 	var u *User
 	if len(us) > 0 {
 		u = &us[0]
@@ -111,9 +111,11 @@ func AppendToReplayHeader(ctx context.Context, us ...User) {
 		u = FromServerContext(ctx)
 	}
 	if tr, ok := transport.FromServerContext(ctx); ok {
-		if tr.ReplyHeader() != nil {
-			tr.ReplyHeader().Set("x-md-global-code", u.Code)
-			tr.ReplyHeader().Set("x-md-global-platform", u.Platform)
+		if tr.Kind() == transport.KindGRPC {
+			if tr.ReplyHeader() != nil {
+				tr.ReplyHeader().Set("x-md-global-code", u.Code)
+				tr.ReplyHeader().Set("x-md-global-platform", u.Platform)
+			}
 		}
 	}
 	return
