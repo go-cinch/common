@@ -47,7 +47,7 @@ func getOptionsOrSetDefault(options *Options) *Options {
 	if options == nil {
 		return &Options{
 			key:    "bloom",
-			expire: 1440,
+			expire: 5,
 			hash:   []func(str string) uint64{BKDRHash, SDBMHash, DJBHash},
 		}
 	}
