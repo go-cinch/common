@@ -3,7 +3,7 @@ module github.com/go-cinch/common/worker
 go 1.18
 
 require (
-	github.com/go-cinch/common/lock v0.0.0-20220922093004-ef576708865a
+	github.com/go-cinch/common/lock v0.0.0-20221122080153-41f82a68a111
 	github.com/go-cinch/common/log v0.0.0-20220927061933-ccf4ca4bccbe
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-module/carbon/v2 v2.1.9

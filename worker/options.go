@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"reflect"
 	"time"
 )
 
@@ -14,6 +15,7 @@ type Options struct {
 	handler        func(ctx context.Context, p Payload) error
 	callback       string
 	clearArchived  int
+	timeout        int
 }
 
 func WithGroup(s string) func(*Options) {
@@ -70,6 +72,14 @@ func WithClearArchived(second int) func(*Options) {
 	}
 }
 
+func WithTimeout(second int) func(*Options) {
+	return func(options *Options) {
+		if second > 0 {
+			getOptionsOrSetDefault(options).timeout = second
+		}
+	}
+}
+
 func getOptionsOrSetDefault(options *Options) *Options {
 	if options == nil {
 		return &Options{
@@ -79,6 +89,7 @@ func getOptionsOrSetDefault(options *Options) *Options {
 			retention:      60,
 			maxRetry:       3,
 			clearArchived:  300,
+			timeout:        10,
 		}
 	}
 	return options
@@ -88,12 +99,13 @@ type RunOptions struct {
 	uid       string
 	group     string
 	payload   string
-	expr      string         // only period task
-	in        *time.Duration // only once task
-	at        *time.Time     // only once task
-	now       bool           // only once task
-	retention int            // only once task
-	replace   bool           // only once task
+	expr      string          // only period task
+	in        *time.Duration  // only once task
+	at        *time.Time      // only once task
+	now       bool            // only once task
+	retention int             // only once task
+	replace   bool            // only once task
+	ctx       context.Context // only once task
 	maxRetry  int
 	timeout   int
 }
@@ -155,6 +167,14 @@ func WithRunReplace(flag bool) func(*RunOptions) {
 	}
 }
 
+func WithRunCtx(ctx context.Context) func(*RunOptions) {
+	return func(options *RunOptions) {
+		if !interfaceIsNil(ctx) {
+			getRunOptionsOrSetDefault(options).ctx = ctx
+		}
+	}
+}
+
 func WithRunMaxRetry(count int) func(*RunOptions) {
 	return func(options *RunOptions) {
 		getRunOptionsOrSetDefault(options).maxRetry = count
@@ -177,4 +197,12 @@ func getRunOptionsOrSetDefault(options *RunOptions) *RunOptions {
 		}
 	}
 	return options
+}
+
+func interfaceIsNil(i interface{}) bool {
+	v := reflect.ValueOf(i)
+	if v.Kind() == reflect.Ptr {
+		return v.IsNil()
+	}
+	return i == nil
 }

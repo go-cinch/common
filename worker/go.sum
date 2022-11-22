@@ -31,8 +31,8 @@ github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4
 github.com/fsnotify/fsnotify v1.5.4 h1:jRbGcIw6P2Meqdwuo0H1p6JVLbL5DHKAKlYndzMwVZI=
 github.com/fsnotify/fsnotify v1.5.4/go.mod h1:OVB6XrOHzAwXMpEM7uPOzcehqUV2UqJxmVXmkdnm1bU=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
-github.com/go-cinch/common/lock v0.0.0-20220922093004-ef576708865a h1:KEZ0nTvgYRWB23r+Hlh3Yf1kexUBFbHUVIl2fTG7k60=
-github.com/go-cinch/common/lock v0.0.0-20220922093004-ef576708865a/go.mod h1:FvTdnnUJB5d4M9HsNE8KxkKTJBOgZRIlsD1Hh5ZumnU=
+github.com/go-cinch/common/lock v0.0.0-20221122080153-41f82a68a111 h1:0x2zUB6MapffUiu9xjqwOGtT/Z4iPi1oMa/gN3tCcSg=
+github.com/go-cinch/common/lock v0.0.0-20221122080153-41f82a68a111/go.mod h1:FvTdnnUJB5d4M9HsNE8KxkKTJBOgZRIlsD1Hh5ZumnU=
 github.com/go-cinch/common/log v0.0.0-20220927061933-ccf4ca4bccbe h1:wEIQFIzOpIPvttYsZQ6NrjpwlHLS+CJR+LNVZE/ttgE=
 github.com/go-cinch/common/log v0.0.0-20220927061933-ccf4ca4bccbe/go.mod h1:sWaidTCXD+LtnuRbiQpmsIDAsX8LlYcbJSAIQZ5P23U=
 github.com/go-kratos/aegis v0.1.2/go.mod h1:jYeSQ3Gesba478zEnujOiG5QdsyF3Xk/8owFUeKcHxw=

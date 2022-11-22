@@ -98,7 +98,7 @@ func (p periodTaskHandler) ProcessTask(ctx context.Context, t *asynq.Task) (err 
 			Info("no task handler")
 	}
 	// save processed count
-	p.tk.processed(payload.Uid)
+	p.tk.processed(ctx, payload.Uid)
 	return
 }
 
@@ -222,7 +222,14 @@ func (wk Worker) Once(options ...func(*RunOptions)) (err error) {
 	_, err = wk.client.Enqueue(t, taskOpts...)
 	if ops.replace && errors.Is(err, asynq.ErrTaskIDConflict) {
 		// remove old one if replace = true
-		wk.Remove(ops.uid)
+		ctx := wk.getDefaultTimeoutCtx()
+		if ops.ctx != nil {
+			ctx = ops.ctx
+		}
+		err = wk.Remove(ctx, ops.uid)
+		if err != nil {
+			return
+		}
 		_, err = wk.client.Enqueue(t, taskOpts...)
 	}
 	return
@@ -252,7 +259,8 @@ func (wk Worker) Cron(options ...func(*RunOptions)) (err error) {
 		MaxRetry: ops.maxRetry,
 		Timeout:  ops.timeout,
 	}
-	_, err = wk.redis.HSet(context.Background(), wk.ops.redisPeriodKey, ops.uid, t.String()).Result()
+	ctx := wk.getDefaultTimeoutCtx()
+	_, err = wk.redis.HSet(ctx, wk.ops.redisPeriodKey, ops.uid, t.String()).Result()
 	if err != nil {
 		err = errors.WithStack(ErrSaveCron)
 		return
@@ -260,33 +268,24 @@ func (wk Worker) Cron(options ...func(*RunOptions)) (err error) {
 	return
 }
 
-func (wk Worker) Remove(uid string) (err error) {
-	var ok bool
-	for {
-		ok = wk.lock.Lock()
-		if ok {
-			break
-		}
-		time.Sleep(100 * time.Millisecond)
+func (wk Worker) Remove(ctx context.Context, uid string) (err error) {
+	err = wk.lock.MustLock(ctx)
+	if err != nil {
+		return
 	}
-	defer wk.lock.Unlock()
-	wk.redis.HDel(context.Background(), wk.ops.redisPeriodKey, uid)
+	defer wk.lock.Unlock(ctx)
+	wk.redis.HDel(ctx, wk.ops.redisPeriodKey, uid)
 
 	err = wk.inspector.DeleteTask(wk.ops.group, uid)
 	return
 }
 
-func (wk Worker) processed(uid string) {
-	var ok bool
-	for {
-		ok = wk.lock.Lock()
-		if ok {
-			break
-		}
-		time.Sleep(100 * time.Millisecond)
+func (wk Worker) processed(ctx context.Context, uid string) {
+	err := wk.lock.MustLock(ctx)
+	if err != nil {
+		return
 	}
-	defer wk.lock.Unlock()
-	ctx := context.Background()
+	defer wk.lock.Unlock(ctx)
 	t, e := wk.redis.HGet(ctx, wk.ops.redisPeriodKey, uid).Result()
 	if e == nil || e != redis.Nil {
 		var item periodTask
@@ -298,7 +297,7 @@ func (wk Worker) processed(uid string) {
 }
 
 func (wk Worker) scan() {
-	ctx := context.Background()
+	ctx := wk.getDefaultTimeoutCtx()
 	ok := wk.lock.Lock()
 	if !ok {
 		return
@@ -348,7 +347,7 @@ func (wk Worker) clearArchived() {
 	if err != nil {
 		return
 	}
-	ctx := context.Background()
+	ctx := wk.getDefaultTimeoutCtx()
 	for _, item := range list {
 		last := carbon.Time2Carbon(item.LastFailedAt)
 		if !last.IsZero() && item.Retried < item.MaxRetry {
@@ -392,6 +391,11 @@ func (wk Worker) clearArchived() {
 			wk.inspector.DeleteTask(wk.ops.group, uid)
 		}
 	}
+}
+
+func (wk Worker) getDefaultTimeoutCtx() context.Context {
+	c, _ := context.WithTimeout(context.Background(), time.Duration(wk.ops.timeout)*time.Second)
+	return c
 }
 
 func getNext(expr string, timestamp int64) (next int64, err error) {
