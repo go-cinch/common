@@ -93,6 +93,7 @@ type RunOptions struct {
 	at        *time.Time     // only once task
 	now       bool           // only once task
 	retention int            // only once task
+	replace   bool           // only once task
 	maxRetry  int
 	timeout   int
 }
@@ -144,6 +145,13 @@ func WithRunRetention(second int) func(*RunOptions) {
 		if second > 0 {
 			getRunOptionsOrSetDefault(options).retention = second
 		}
+	}
+}
+
+// WithRunReplace remove old one and create new one when uid repeat
+func WithRunReplace(flag bool) func(*RunOptions) {
+	return func(options *RunOptions) {
+		getRunOptionsOrSetDefault(options).replace = flag
 	}
 }
 

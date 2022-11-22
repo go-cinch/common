@@ -220,6 +220,11 @@ func (wk Worker) Once(options ...func(*RunOptions)) (err error) {
 		taskOpts = append(taskOpts, asynq.ProcessIn(time.Millisecond))
 	}
 	_, err = wk.client.Enqueue(t, taskOpts...)
+	if ops.replace && errors.Is(err, asynq.ErrTaskIDConflict) {
+		// remove old one if replace = true
+		wk.Remove(ops.uid)
+		_, err = wk.client.Enqueue(t, taskOpts...)
+	}
 	return
 }
 
