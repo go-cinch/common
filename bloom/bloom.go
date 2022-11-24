@@ -38,8 +38,8 @@ func New(options ...func(*Options)) *Bloom {
 	return b
 }
 
-func (b *Bloom) Add(str ...string) (err error) {
-	ctx := context.Background()
+func (b Bloom) Add(str ...string) (err error) {
+	ctx := b.getDefaultTimeoutCtx()
 	p := b.ops.redis.Pipeline()
 	for _, item := range str {
 		_, err = p.Eval(ctx, luaSet, []string{b.ops.key}, b.offset(item)).Result()
@@ -52,8 +52,8 @@ func (b *Bloom) Add(str ...string) (err error) {
 	return
 }
 
-func (b *Bloom) Exist(str string) (ok bool) {
-	res, err := b.ops.redis.Eval(context.Background(), luaGet, []string{b.ops.key}, b.offset(str)).Result()
+func (b Bloom) Exist(str string) (ok bool) {
+	res, err := b.ops.redis.Eval(b.getDefaultTimeoutCtx(), luaGet, []string{b.ops.key}, b.offset(str)).Result()
 	if err != nil || res != "1" {
 		return
 	}
@@ -61,11 +61,16 @@ func (b *Bloom) Exist(str string) (ok bool) {
 	return
 }
 
-func (b *Bloom) offset(str string) (list []string) {
+func (b Bloom) offset(str string) (list []string) {
 	list = make([]string, 0)
 	for _, f := range b.ops.hash {
 		offset := f(str)
 		list = append(list, fmt.Sprintf("%d", offset))
 	}
 	return
+}
+
+func (b Bloom) getDefaultTimeoutCtx() context.Context {
+	c, _ := context.WithTimeout(context.Background(), time.Duration(b.ops.timeout)*time.Second)
+	return c
 }

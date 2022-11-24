@@ -5,10 +5,11 @@ import (
 )
 
 type Options struct {
-	redis  redis.UniversalClient
-	key    string
-	expire int
-	hash   []func(str string) uint64
+	redis   redis.UniversalClient
+	key     string
+	expire  int
+	hash    []func(str string) uint64
+	timeout int
 }
 
 func WithRedis(rd redis.UniversalClient) func(*Options) {
@@ -43,12 +44,21 @@ func WithHash(f ...func(str string) uint64) func(*Options) {
 	}
 }
 
+func WithTimeout(seconds int) func(*Options) {
+	return func(options *Options) {
+		if seconds > 0 {
+			getOptionsOrSetDefault(options).timeout = seconds
+		}
+	}
+}
+
 func getOptionsOrSetDefault(options *Options) *Options {
 	if options == nil {
 		return &Options{
-			key:    "bloom",
-			expire: 5,
-			hash:   []func(str string) uint64{BKDRHash, SDBMHash, DJBHash},
+			key:     "bloom",
+			expire:  5,
+			hash:    []func(str string) uint64{BKDRHash, SDBMHash, DJBHash},
+			timeout: 3,
 		}
 	}
 	return options
