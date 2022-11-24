@@ -19,6 +19,9 @@ func TestDefault(t *testing.T) {
 	WithFields(Fields{"field1": 1, "filed2": 2}).Info("test info with 2 field and format %d", 1)
 
 	WithError(fmt.Errorf("something error")).Info("test info with err")
+	WithError(nil).Info("test info without err")
+	WithError(fmt.Errorf("something error")).Fatal("test fatal with err")
+	WithError(nil).Fatal("test fatal without err")
 
 	WithContext(context.WithValue(context.Background(), "ctx", "ctx")).Info("test info with ctx")
 	WithContext(context.WithValue(context.Background(), "ctx", "ctx")).Info("test info with ctx and format %v", fmt.Errorf("error"))

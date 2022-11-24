@@ -2,7 +2,7 @@ module github.com/go-cinch/common/log
 
 go 1.18
 
-require github.com/go-kratos/kratos/v2 v2.5.0
+require github.com/go-kratos/kratos/v2 v2.5.3
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect

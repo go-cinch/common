@@ -41,8 +41,12 @@ func (w *Wrapper) Fatal(args ...interface{}) {
 }
 
 func (w *Wrapper) WithError(err error) *Wrapper {
+	l := w.log
+	if err != nil {
+		l = w.log.WithFields(Fields{ErrKey: err})
+	}
 	return &Wrapper{
-		log: w.log.WithFields(Fields{"err": err}),
+		log: l,
 	}
 }
 
