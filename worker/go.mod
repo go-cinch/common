@@ -3,8 +3,8 @@ module github.com/go-cinch/common/worker
 go 1.18
 
 require (
-	github.com/go-cinch/common/lock v0.0.0-20221122080153-41f82a68a111
-	github.com/go-cinch/common/log v0.0.0-20220927061933-ccf4ca4bccbe
+	github.com/go-cinch/common/lock v1.0.0
+	github.com/go-cinch/common/log v1.0.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-module/carbon/v2 v2.1.9
 	github.com/google/uuid v1.3.0
@@ -16,7 +16,7 @@ require (
 require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
-	github.com/go-kratos/kratos/v2 v2.5.0 // indirect
+	github.com/go-kratos/kratos/v2 v2.5.3 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
