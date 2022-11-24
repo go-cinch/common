@@ -31,9 +31,10 @@ func (nl NxLock) MustLock(c ...context.Context) (err error) {
 	if len(c) > 0 {
 		ctx = c[0]
 	}
+	var retry int
 	for {
 		ok, e := nl.ops.redis.SetNX(ctx, nl.ops.key, 1, nl.ops.expiration).Result()
-		if errors.Is(e, context.DeadlineExceeded) {
+		if errors.Is(e, context.DeadlineExceeded) || errors.Is(e, context.Canceled) || (e != nil && e.Error() == "redis: connection pool timeout") {
 			err = e
 			return
 		}
@@ -41,6 +42,11 @@ func (nl NxLock) MustLock(c ...context.Context) (err error) {
 			break
 		}
 		time.Sleep(25 * time.Millisecond)
+		retry++
+		if retry > 400 {
+			err = errors.New("lock timeout")
+			return
+		}
 	}
 	return
 }
