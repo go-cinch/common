@@ -2,7 +2,6 @@ package jwt
 
 import (
 	"context"
-	"github.com/go-cinch/common/copierx"
 	"github.com/go-kratos/kratos/v2/metadata"
 	"github.com/go-kratos/kratos/v2/transport"
 	jwtV4 "github.com/golang-jwt/jwt/v4"
@@ -18,9 +17,9 @@ const (
 )
 
 type User struct {
-	Token    string
-	Code     string
-	Platform string
+	Token    string `json:"token"`
+	Code     string `json:"code"`
+	Platform string `json:"platform"`
 }
 
 type user struct{}
@@ -60,7 +59,9 @@ func NewServerContextByReplyMD(ctx context.Context, md gmd.MD) context.Context {
 func FromServerContext(ctx context.Context) (u *User) {
 	u = new(User)
 	if v, ok := ctx.Value(user{}).(*User); ok {
-		copierx.Copy(&u, v)
+		u.Code = v.Code
+		u.Platform = v.Platform
+		u.Token = v.Token
 	} else if md, ok2 := metadata.FromServerContext(ctx); ok2 {
 		u.Code = md.Get("x-md-global-code")
 		u.Platform = md.Get("x-md-global-platform")
