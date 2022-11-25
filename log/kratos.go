@@ -13,8 +13,13 @@ import (
 )
 
 var (
-	logDir    = ""
-	commonDir = ""
+	logDir      = ""
+	commonDir   = ""
+	notSkipDirs = []string{
+		"transport/grpc/server",
+		"transport/http/server",
+		"middleware/logging/logging",
+	}
 )
 
 func init() {
@@ -136,7 +141,7 @@ func caller(ops Options) string {
 				break
 			}
 		}
-		if strings.Contains(file, "go-kratos") && (strings.Contains(file, "transport/grpc/server") || strings.Contains(file, "transport/http/server")) {
+		if strings.Contains(file, "go-kratos") && containsString(notSkipDirs, file) {
 			skip = false
 		}
 		if skip {
@@ -179,4 +184,13 @@ func removeBaseDir(s string, ops Options) string {
 		}
 	}
 	return s
+}
+
+func containsString(s []string, v string) bool {
+	for _, vv := range s {
+		if strings.Contains(v, vv) {
+			return true
+		}
+	}
+	return false
 }
