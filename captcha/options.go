@@ -11,6 +11,7 @@ type Options struct {
 	redis  redis.UniversalClient
 	prefix string
 	expire int
+	num    int
 }
 
 func WithCtx(ctx context.Context) func(*Options) {
@@ -43,12 +44,21 @@ func WithExpire(min int) func(*Options) {
 	}
 }
 
+func WithNum(num int) func(*Options) {
+	return func(options *Options) {
+		if num > 0 {
+			getOptionsOrSetDefault(options).num = num
+		}
+	}
+}
+
 func getOptionsOrSetDefault(options *Options) *Options {
 	if options == nil {
 		return &Options{
 			ctx:    context.Background(),
 			prefix: "captcha_",
 			expire: 5,
+			num:    4,
 		}
 	}
 	return options

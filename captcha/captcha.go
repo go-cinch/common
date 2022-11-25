@@ -20,7 +20,8 @@ func New(options ...func(*Options)) *Captcha {
 		ops: *ops,
 	}
 	ca.store = NewStore(options...)
-	ca.c = base64Captcha.NewCaptcha(base64Captcha.DefaultDriverDigit, ca.store)
+	width := ops.num * 45
+	ca.c = base64Captcha.NewCaptcha(base64Captcha.NewDriverDigit(80, width, ops.num, 0.7, 80), ca.store)
 	return ca
 }
 
