@@ -47,6 +47,9 @@ func New(options ...func(*Options)) (rp *I18n) {
 
 // Select can change language
 func (i I18n) Select(lang language.Tag) *I18n {
+	if lang.String() == "und" {
+		lang = i.ops.language
+	}
 	return &I18n{
 		ops:       i.ops,
 		bundle:    i.bundle,
