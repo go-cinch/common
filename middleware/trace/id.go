@@ -1,4 +1,4 @@
-package middleware
+package trace
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func TraceId() middleware.Middleware {
+func Id() middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (reply interface{}, err error) {
 			if span := trace.SpanContextFromContext(ctx); span.HasTraceID() {

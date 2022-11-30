@@ -1,4 +1,4 @@
-module github.com/go-cinch/common/middleware
+module github.com/go-cinch/common/middleware/trace
 
 go 1.18
 
