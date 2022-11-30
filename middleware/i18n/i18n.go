@@ -16,16 +16,21 @@ func Translator(options ...func(*i18n.Options)) middleware.Middleware {
 	i = i18n.New(options...)
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (rp interface{}, err error) {
-			lang := language.English
+			var lang language.Tag
 			if tr, ok := transport.FromServerContext(ctx); ok {
 				accept := tr.RequestHeader().Get("accept-language")
 				lang = language.Make(accept)
 			}
 			ii := i.Select(lang)
-			ctx = context.WithValue(ctx, translator{}, ii)
+			ctx = NewContext(ctx, ii)
 			return handler(ctx, req)
 		}
 	}
+}
+
+func NewContext(ctx context.Context, i *i18n.I18n) context.Context {
+	ctx = context.WithValue(ctx, translator{}, i)
+	return ctx
 }
 
 func FromContext(ctx context.Context) (rp *i18n.I18n) {
