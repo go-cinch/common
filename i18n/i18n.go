@@ -7,7 +7,7 @@ import (
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/pkg/errors"
 	"golang.org/x/text/language"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
 )
@@ -18,7 +18,7 @@ type I18n struct {
 	localizer *i18n.Localizer
 }
 
-func New(options ...func(*Options)) *I18n {
+func New(options ...func(*Options)) (rp *I18n) {
 	ops := getOptionsOrSetDefault(nil)
 	for _, f := range options {
 		f(ops)
@@ -33,11 +33,16 @@ func New(options ...func(*Options)) *I18n {
 	default:
 		bundle.RegisterUnmarshalFunc("yml", yaml.Unmarshal)
 	}
-	return &I18n{
+	rp = &I18n{
 		ops:       *ops,
 		bundle:    bundle,
 		localizer: localizer,
 	}
+	for _, item := range ops.files {
+		rp.Add(item)
+	}
+	rp.AddFs(ops.fs)
+	return
 }
 
 // Select can change language
@@ -63,7 +68,7 @@ func (i I18n) E(id string) error {
 }
 
 // Add is add language file or dir(auto get language by filename)
-func (i I18n) Add(f string) {
+func (i *I18n) Add(f string) {
 	info, err := os.Stat(f)
 	if err != nil {
 		return
@@ -81,7 +86,7 @@ func (i I18n) Add(f string) {
 }
 
 // AddFs is add language embed files
-func (i I18n) AddFs(fs embed.FS) {
+func (i *I18n) AddFs(fs embed.FS) {
 	files := readFs(fs, ".")
 	for _, name := range files {
 		i.bundle.LoadMessageFileFS(fs, name)
