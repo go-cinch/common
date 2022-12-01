@@ -22,7 +22,7 @@ func WithFormat(format string) func(*Options) {
 
 func WithLanguage(lang language.Tag) func(*Options) {
 	return func(options *Options) {
-		if lang.String() != "" {
+		if lang.String() != "und" {
 			getOptionsOrSetDefault(options).language = lang
 		}
 	}

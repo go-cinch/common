@@ -16,6 +16,7 @@ type I18n struct {
 	ops       Options
 	bundle    *i18n.Bundle
 	localizer *i18n.Localizer
+	lang      language.Tag
 }
 
 func New(options ...func(*Options)) (rp *I18n) {
@@ -37,6 +38,7 @@ func New(options ...func(*Options)) (rp *I18n) {
 		ops:       *ops,
 		bundle:    bundle,
 		localizer: localizer,
+		lang:      ops.language,
 	}
 	for _, item := range ops.files {
 		rp.Add(item)
@@ -54,15 +56,26 @@ func (i I18n) Select(lang language.Tag) *I18n {
 		ops:       i.ops,
 		bundle:    i.bundle,
 		localizer: i18n.NewLocalizer(i.bundle, lang.String()),
+		lang:      lang,
 	}
 }
 
+// Language get current language
+func (i I18n) Language() language.Tag {
+	return i.lang
+}
+
 func (i I18n) T(id string) (rp string) {
-	rp, _ = i.localizer.Localize(&i18n.LocalizeConfig{
+	var err error
+	rp, err = i.localizer.Localize(&i18n.LocalizeConfig{
 		DefaultMessage: &i18n.Message{
 			ID: id,
 		},
 	})
+	if err != nil {
+		// use id as default message when unable to translate
+		rp = id
+	}
 	return
 }
 
