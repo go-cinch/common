@@ -3,9 +3,10 @@ module github.com/go-cinch/common/middleware/i18n
 go 1.18
 
 require (
-	github.com/go-cinch/common/i18n v0.0.0-20221130102700-b712a225b780
+	github.com/go-cinch/common/i18n v0.0.0-20221201034053-85ab9d8f0182
 	github.com/go-kratos/kratos/v2 v2.5.3
 	golang.org/x/text v0.4.0
+	google.golang.org/grpc v1.46.2
 )
 
 require (

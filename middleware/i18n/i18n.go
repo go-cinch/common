@@ -6,6 +6,7 @@ import (
 	"github.com/go-kratos/kratos/v2/middleware"
 	"github.com/go-kratos/kratos/v2/transport"
 	"golang.org/x/text/language"
+	"google.golang.org/grpc/metadata"
 )
 
 var i = i18n.New()
@@ -17,11 +18,15 @@ func Translator(options ...func(*i18n.Options)) middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (rp interface{}, err error) {
 			var lang language.Tag
+			header := make(metadata.MD)
+			key := "accept-language"
 			if tr, ok := transport.FromServerContext(ctx); ok {
-				accept := tr.RequestHeader().Get("accept-language")
+				accept := tr.RequestHeader().Get(key)
 				lang = language.Make(accept)
 			}
 			ii := i.Select(lang)
+			header.Set(key, ii.Language().String())
+			ctx = metadata.NewOutgoingContext(ctx, header)
 			ctx = NewContext(ctx, ii)
 			return handler(ctx, req)
 		}

@@ -24,8 +24,8 @@ github.com/envoyproxy/go-control-plane v0.10.2-0.20220325020618-49ff273808a1/go.
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
 github.com/fsnotify/fsnotify v1.5.4/go.mod h1:OVB6XrOHzAwXMpEM7uPOzcehqUV2UqJxmVXmkdnm1bU=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
-github.com/go-cinch/common/i18n v0.0.0-20221130102700-b712a225b780 h1:NDP8zIOed6k88WJsXZAhaxjfg/XHeOhWiisrbgdA7zg=
-github.com/go-cinch/common/i18n v0.0.0-20221130102700-b712a225b780/go.mod h1:PppPW1pzLp0p6JnP+7r9ju9Q4Zu7tH5wb7QptPCTXGI=
+github.com/go-cinch/common/i18n v0.0.0-20221201034053-85ab9d8f0182 h1:ZP/icAJGtf117sk2tSlC7w1KhnNUXZWW1CBGVx+ekc4=
+github.com/go-cinch/common/i18n v0.0.0-20221201034053-85ab9d8f0182/go.mod h1:PppPW1pzLp0p6JnP+7r9ju9Q4Zu7tH5wb7QptPCTXGI=
 github.com/go-kratos/aegis v0.1.2/go.mod h1:jYeSQ3Gesba478zEnujOiG5QdsyF3Xk/8owFUeKcHxw=
 github.com/go-kratos/kratos/v2 v2.5.3 h1:v3F0fIFXh4HJgXprHKPGhRaobggolwPAbaBAjR+wC+Q=
 github.com/go-kratos/kratos/v2 v2.5.3/go.mod h1:5acyLj4EgY428AJnZl2EwCrMV1OVlttQFBum+SghMiA=
@@ -163,6 +163,7 @@ google.golang.org/grpc v1.27.0/go.mod h1:qbnxyOmOxrQa7FizSgH+ReBfzJrCY1pSN7KXBS8
 google.golang.org/grpc v1.33.1/go.mod h1:fr5YgcSWrqhRRxogOsw7RzIpsmvOZ6IcH4kBYTpR3n0=
 google.golang.org/grpc v1.36.0/go.mod h1:qjiiYl8FncCW8feJPdyg3v6XW24KsRHe+dy9BAGRRjU=
 google.golang.org/grpc v1.46.0/go.mod h1:vN9eftEi1UMyUsIF80+uQXhHjbXYbm0uXoFCACuMGWk=
+google.golang.org/grpc v1.46.2 h1:u+MLGgVf7vRdjEYZ8wDFhAVNmhkbJ5hmrA1LMWK1CAQ=
 google.golang.org/grpc v1.46.2/go.mod h1:vN9eftEi1UMyUsIF80+uQXhHjbXYbm0uXoFCACuMGWk=
 google.golang.org/protobuf v0.0.0-20200109180630-ec00e32a8dfd/go.mod h1:DFci5gLYBciE7Vtevhsrf46CRTquxDuWsQurQQe4oz8=
 google.golang.org/protobuf v0.0.0-20200221191635-4d8936d0db64/go.mod h1:kwYJMbMJ01Woi6D6+Kah6886xMZcty6N08ah7+eCXa0=
