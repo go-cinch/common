@@ -6,6 +6,7 @@ import (
 	"github.com/go-cinch/common/log"
 	m "github.com/go-sql-driver/mysql"
 	migrate "github.com/rubenv/sql-migrate"
+	"os"
 	"strings"
 )
 
@@ -63,6 +64,23 @@ func Do(options ...func(*Options)) (err error) {
 				WithError(err).
 				Error("exec before callback failed")
 			return
+		}
+	}
+
+	rollback := os.Getenv("SQL_MIGRATE_ROLLBACK")
+	if rollback != "" {
+		arr := strings.Split(rollback, "; ")
+		for i, item := range arr {
+			_, err = db.ExecContext(ops.ctx, item)
+			if err != nil {
+				log.
+					WithContext(ops.ctx).
+					WithError(err).
+					WithField("rollback.sql", rollback).
+					WithField(fmt.Sprintf("rollback.%d", i+1), item).
+					Error("exec rollback failed")
+				return
+			}
 		}
 	}
 
