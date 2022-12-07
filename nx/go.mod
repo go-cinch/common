@@ -1,4 +1,4 @@
-module github.com/go-cinch/common/lock
+module github.com/go-cinch/common/nx
 
 go 1.18
 
