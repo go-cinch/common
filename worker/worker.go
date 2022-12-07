@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/go-cinch/common/lock"
 	"github.com/go-cinch/common/log"
+	"github.com/go-cinch/common/nx"
 	"github.com/go-redis/redis/v8"
 	"github.com/golang-module/carbon/v2"
 	"github.com/google/uuid"
@@ -21,7 +21,7 @@ type Worker struct {
 	ops       Options
 	redis     redis.UniversalClient
 	redisOpt  asynq.RedisConnOpt
-	lock      *lock.NxLock
+	lock      *nx.Nx
 	client    *asynq.Client
 	inspector *asynq.Inspector
 	Error     error
@@ -142,10 +142,10 @@ func New(options ...func(*Options)) (tk *Worker) {
 	client := asynq.NewClient(rs)
 	inspector := asynq.NewInspector(rs)
 	// initialize redis lock
-	nxLock := lock.NewNxLock(
-		lock.WithNxLockRedis(rd),
-		lock.WithNxLockExpiration(10),
-		lock.WithNxLockKey(ops.redisPeriodKey+".lock"),
+	nxLock := nx.New(
+		nx.WithRedis(rd),
+		nx.WithExpire(10),
+		nx.WithKey(ops.redisPeriodKey+".lock"),
 	)
 	// initialize server
 	srv := asynq.NewServer(
