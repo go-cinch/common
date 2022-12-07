@@ -1,4 +1,4 @@
-package mq
+package rabbit
 
 import (
 	"github.com/go-cinch/common/log"
