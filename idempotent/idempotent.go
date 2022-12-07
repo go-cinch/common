@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/go-cinch/common/log"
 	"github.com/google/uuid"
+	"time"
 )
 
 // redis lua script(read => delete => get delete flag)
@@ -38,7 +39,7 @@ func New(options ...func(*Options)) *Idempotent {
 func (i *Idempotent) Token(ctx context.Context) (token string) {
 	token = uuid.NewString()
 	if i.ops.redis != nil {
-		i.ops.redis.Set(ctx, fmt.Sprintf("%s_%s", i.ops.prefix, token), true, i.ops.expiration)
+		i.ops.redis.Set(ctx, fmt.Sprintf("%s_%s", i.ops.prefix, token), true, time.Duration(i.ops.expire)*time.Minute)
 	} else {
 		log.WithContext(ctx).Warn("please enable redis, otherwise the idempotent is invalid")
 	}
