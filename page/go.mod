@@ -3,7 +3,7 @@ module github.com/go-cinch/common/page
 go 1.18
 
 require (
-	github.com/go-cinch/common/log v1.0.0
+	github.com/go-cinch/common/log v1.0.1
 	gorm.io/gorm v1.24.0
 )
 

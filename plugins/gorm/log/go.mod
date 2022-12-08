@@ -3,7 +3,7 @@ module github.com/go-cinch/common/plugins/gorm/log
 go 1.18
 
 require (
-	github.com/go-cinch/common/log v1.0.0
+	github.com/go-cinch/common/log v1.0.1
 	github.com/pkg/errors v0.9.1
 	gorm.io/gorm v1.24.0
 )

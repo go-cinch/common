@@ -3,7 +3,7 @@ module github.com/go-cinch/common/idempotent
 go 1.18
 
 require (
-	github.com/go-cinch/common/log v1.0.0
+	github.com/go-cinch/common/log v1.0.1
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/google/uuid v1.3.0
 )
