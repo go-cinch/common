@@ -24,8 +24,8 @@ github.com/envoyproxy/go-control-plane v0.10.2-0.20220325020618-49ff273808a1/go.
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
 github.com/fsnotify/fsnotify v1.5.4/go.mod h1:OVB6XrOHzAwXMpEM7uPOzcehqUV2UqJxmVXmkdnm1bU=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
-github.com/go-cinch/common/i18n v0.0.0-20221201034053-85ab9d8f0182 h1:ZP/icAJGtf117sk2tSlC7w1KhnNUXZWW1CBGVx+ekc4=
-github.com/go-cinch/common/i18n v0.0.0-20221201034053-85ab9d8f0182/go.mod h1:PppPW1pzLp0p6JnP+7r9ju9Q4Zu7tH5wb7QptPCTXGI=
+github.com/go-cinch/common/i18n v1.0.0 h1:iUIluM5HxfsdRZWDVjfeGX42610xFbduUFvIxS7Jcyc=
+github.com/go-cinch/common/i18n v1.0.0/go.mod h1:PppPW1pzLp0p6JnP+7r9ju9Q4Zu7tH5wb7QptPCTXGI=
 github.com/go-kratos/aegis v0.1.2/go.mod h1:jYeSQ3Gesba478zEnujOiG5QdsyF3Xk/8owFUeKcHxw=
 github.com/go-kratos/kratos/v2 v2.5.3 h1:v3F0fIFXh4HJgXprHKPGhRaobggolwPAbaBAjR+wC+Q=
 github.com/go-kratos/kratos/v2 v2.5.3/go.mod h1:5acyLj4EgY428AJnZl2EwCrMV1OVlttQFBum+SghMiA=
