@@ -9,6 +9,6 @@ require (
 )
 
 require (
-	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
+	github.com/go-gorp/gorp/v3 v3.0.2 // indirect
 	github.com/go-kratos/kratos/v2 v2.5.3 // indirect
 )

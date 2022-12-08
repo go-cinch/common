@@ -9,7 +9,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/streadway/amqp v1.0.0
 	github.com/thoas/go-funk v0.9.2
-	google.golang.org/protobuf v1.28.1
+	google.golang.org/protobuf v1.28.0
 )
 
 require (
