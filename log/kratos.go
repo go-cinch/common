@@ -90,9 +90,6 @@ func (l *kratosLog) Log(level Level, args ...interface{}) {
 	a := make([]interface{}, 0)
 	a = append(a, l.ops.loggerMessageKey, fmt.Sprint(args...))
 	for k, v := range l.fields {
-		if k == ErrKey && level > ErrorLevel {
-			level = ErrorLevel
-		}
 		a = append(a, k, v)
 	}
 	l.log.Log(loggerToKratosLogLevel(level), a...)
@@ -102,9 +99,6 @@ func (l *kratosLog) Logf(level Level, format string, args ...interface{}) {
 	a := make([]interface{}, 0)
 	a = append(a, l.ops.loggerMessageKey, fmt.Sprintf(format, args...))
 	for k, v := range l.fields {
-		if k == ErrKey && level > ErrorLevel {
-			level = ErrorLevel
-		}
 		a = append(a, k, v)
 	}
 	l.log.Log(loggerToKratosLogLevel(level), a...)
