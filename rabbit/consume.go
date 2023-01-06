@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
 	"sync/atomic"
+	"time"
 )
 
 type Consume struct {
@@ -59,6 +60,11 @@ func (qu *Queue) ConsumeOne(size int, handler func(c context.Context, q string, 
 		return
 	}
 
+	if qu.ex == nil {
+		err = errors.Errorf("ex is nil")
+		return
+	}
+
 	if atomic.LoadInt32(&qu.ex.rb.lost) == 1 {
 		err = errors.Errorf("connection maybe lost")
 		return
@@ -68,17 +74,7 @@ func (qu *Queue) ConsumeOne(size int, handler func(c context.Context, q string, 
 		err = errors.WithStack(co.Error)
 		return
 	}
-	ch := qu.ex.rb.pool.GetChannelFromPool()
-	defer func() {
-		qu.ex.rb.pool.ReturnChannel(ch, false)
-	}()
-	var ds []amqp.Delivery
-	ds, err = qu.getBatch(ch, qu.ops.name, size, co.ops.autoAck)
-
-	if err != nil {
-		err = errors.WithStack(err)
-		return
-	}
+	ds := qu.getBatch(qu.ops.name, size, co.ops.autoAck)
 	ctx := context.Background()
 	if co.ops.oneCtx != nil {
 		ctx = co.ops.oneCtx
@@ -151,15 +147,15 @@ func (qu *Queue) beforeConsume(options ...func(*ConsumeOptions)) *Consume {
 			NoWait:               co.ops.noWait,
 			Args:                 co.ops.args,
 			QosCountOverride:     co.ops.qosPrefetchCount,
-			SleepOnIdleInterval:  100,
-			SleepOnErrorInterval: 100,
+			SleepOnIdleInterval:  uint32(qu.ex.rb.ops.healthCheckInterval),
+			SleepOnErrorInterval: uint32(qu.ex.rb.ops.healthCheckInterval),
 		},
 		qu.ex.rb.pool,
 	)
 	return &co
 }
 
-func (qu *Queue) getBatch(channel *tcr.ChannelHost, queueName string, batchSize int, autoAck bool) (ds []amqp.Delivery, err error) {
+func (qu *Queue) getBatch(queueName string, batchSize int, autoAck bool) (ds []amqp.Delivery) {
 	ds = make([]amqp.Delivery, 0)
 
 	// Get A Batch of Messages
@@ -170,11 +166,15 @@ GetBatchLoop:
 			break GetBatchLoop
 		}
 
-		var d amqp.Delivery
-		var ok bool
-		d, ok, err = channel.Channel.Get(queueName, autoAck)
+		ch := qu.ex.rb.pool.GetChannelFromPool()
+
+		d, ok, err := ch.Channel.Get(queueName, autoAck)
+		// get data err, maybe connection/channel lost, retry
 		if err != nil {
-			return
+			qu.ex.rb.pool.ReturnChannel(ch, true)
+			log.WithContext(qu.ex.rb.ops.ctx).WithError(err).Warn("failed to get batch, queue: %s, retry...", queueName)
+			time.Sleep(time.Duration(qu.ex.rb.ops.healthCheckInterval) * time.Millisecond)
+			continue
 		}
 
 		if !ok { // Break If empty

@@ -111,11 +111,7 @@ func (rb *Rabbit) Exchange(options ...func(*ExchangeOptions)) *Exchange {
 	}
 	// the exchange will be declared
 	if ex.ops.declare {
-		err := ex.declare()
-		if err != nil {
-			ex.Error = errors.WithStack(err)
-			return ex
-		}
+		ex.declare()
 	}
 	return ex
 }
@@ -161,18 +157,10 @@ func (ex *Exchange) Queue(options ...func(*QueueOptions)) *Queue {
 		return qu
 	}
 	if qu.ops.declare {
-		err := qu.declare()
-		if err != nil {
-			qu.Error = errors.WithStack(err)
-			return qu
-		}
+		qu.declare()
 	}
 	if qu.ops.bind {
-		err := qu.bind()
-		if err != nil {
-			qu.Error = errors.WithStack(err)
-			return qu
-		}
+		qu.bind()
 	}
 	return qu
 }
@@ -237,63 +225,79 @@ func (ex *Exchange) beforeQueue(options ...func(*QueueOptions)) *Queue {
 }
 
 // declare exchange
-func (ex *Exchange) declare() (err error) {
-	ch := ex.rb.pool.GetChannelFromPool()
-	defer func() {
-		ex.rb.pool.ReturnChannel(ch, false)
-	}()
-	if err = ch.Channel.ExchangeDeclare(
-		ex.ops.name,
-		ex.ops.kind,
-		ex.ops.durable,
-		ex.ops.autoDelete,
-		ex.ops.internal,
-		ex.ops.noWait,
-		ex.ops.args,
-	); err != nil {
-		err = errors.Wrapf(err, "failed declare exchange %s(%s)", ex.ops.name, ex.ops.kind)
-		return
+func (ex *Exchange) declare() {
+	for {
+		ch := ex.rb.pool.GetChannelFromPool()
+
+		err := ch.Channel.ExchangeDeclare(
+			ex.ops.name,
+			ex.ops.kind,
+			ex.ops.durable,
+			ex.ops.autoDelete,
+			ex.ops.internal,
+			ex.ops.noWait,
+			ex.ops.args,
+		)
+		// get data err, maybe connection/channel lost, retry
+		if err != nil {
+			ex.rb.pool.ReturnChannel(ch, true)
+			log.WithContext(ex.rb.ops.ctx).WithError(err).Warn("failed declare exchange %s(%s), retry...", ex.ops.name, ex.ops.kind)
+			time.Sleep(time.Duration(ex.rb.ops.healthCheckInterval) * time.Millisecond)
+			continue
+		}
+		break
 	}
 	return
 }
 
 // declare queue
-func (qu *Queue) declare() (err error) {
-	ch := qu.ex.rb.pool.GetChannelFromPool()
-	defer func() {
-		qu.ex.rb.pool.ReturnChannel(ch, false)
-	}()
-	if _, err = ch.Channel.QueueDeclare(
-		qu.ops.name,
-		qu.ops.durable,
-		qu.ops.autoDelete,
-		qu.ops.exclusive,
-		qu.ops.noWait,
-		qu.ops.args,
-	); err != nil {
-		err = errors.Wrapf(err, "failed to declare %s", qu.ops.name)
-		return
+func (qu *Queue) declare() {
+	for {
+		ch := qu.ex.rb.pool.GetChannelFromPool()
+
+		_, err := ch.Channel.QueueDeclare(
+			qu.ops.name,
+			qu.ops.durable,
+			qu.ops.autoDelete,
+			qu.ops.exclusive,
+			qu.ops.noWait,
+			qu.ops.args,
+		)
+		// get data err, maybe connection/channel lost, retry
+		if err != nil {
+			qu.ex.rb.pool.ReturnChannel(ch, true)
+			log.WithContext(qu.ex.rb.ops.ctx).WithError(err).Warn("failed to declare %s, retry...", qu.ops.name)
+			time.Sleep(time.Duration(qu.ex.rb.ops.healthCheckInterval) * time.Millisecond)
+			continue
+		}
+		break
 	}
 	return
 }
 
 // bind queue
-func (qu *Queue) bind() (err error) {
-	ch := qu.ex.rb.pool.GetChannelFromPool()
-	defer func() {
-		qu.ex.rb.pool.ReturnChannel(ch, false)
-	}()
-	for _, key := range qu.ops.routeKeys {
-		if err = ch.Channel.QueueBind(
-			qu.ops.name,
-			key,
-			qu.ex.ops.name,
-			qu.ops.noWait,
-			qu.ops.args,
-		); err != nil {
-			err = errors.Wrapf(err, "failed to declare bind queue, queue: %s, key: %s, exchange: %s", qu.ops.name, key, qu.ex.ops.name)
-			return
+func (qu *Queue) bind() {
+Loop:
+	for {
+		ch := qu.ex.rb.pool.GetChannelFromPool()
+
+		for _, key := range qu.ops.routeKeys {
+			err := ch.Channel.QueueBind(
+				qu.ops.name,
+				key,
+				qu.ex.ops.name,
+				qu.ops.noWait,
+				qu.ops.args,
+			)
+			// get data err, maybe connection/channel lost, retry
+			if err != nil {
+				qu.ex.rb.pool.ReturnChannel(ch, true)
+				log.WithContext(qu.ex.rb.ops.ctx).WithError(err).Warn("failed to declare bind queue, queue: %s, key: %s, exchange: %s, retry...", qu.ops.name, key, qu.ex.ops.name)
+				time.Sleep(time.Duration(qu.ex.rb.ops.healthCheckInterval) * time.Millisecond)
+				continue Loop
+			}
 		}
+		break
 	}
 	return
 }

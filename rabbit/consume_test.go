@@ -37,7 +37,7 @@ func TestQueue_Consume(t *testing.T) {
 }
 
 func handler(ctx context.Context, q string, delivery amqp.Delivery) bool {
-	fmt.Println(ctx, q, delivery.Exchange)
+	fmt.Println("handler", ctx, q, delivery.Exchange)
 	return true
 }
 
@@ -51,6 +51,7 @@ func TestQueue_ConsumeOne(t *testing.T) {
 		err := rb.
 			Exchange(
 				WithExchangeName("ex1"),
+				WithExchangeDeclare(false),
 			).Queue(
 			WithQueueName("q1"),
 			WithQueueDeclare(false),
@@ -59,8 +60,6 @@ func TestQueue_ConsumeOne(t *testing.T) {
 			10,
 			handler,
 		)
-		if err != nil {
-			fmt.Println(err)
-		}
+		fmt.Println(time.Now(), err)
 	}
 }
