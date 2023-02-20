@@ -245,6 +245,7 @@ func (ex *Exchange) declare() {
 			time.Sleep(time.Duration(ex.rb.ops.healthCheckInterval) * time.Millisecond)
 			continue
 		}
+		ex.rb.pool.ReturnChannel(ch, false)
 		break
 	}
 	return
@@ -270,6 +271,7 @@ func (qu *Queue) declare() {
 			time.Sleep(time.Duration(qu.ex.rb.ops.healthCheckInterval) * time.Millisecond)
 			continue
 		}
+		qu.ex.rb.pool.ReturnChannel(ch, false)
 		break
 	}
 	return
@@ -297,6 +299,7 @@ Loop:
 				continue Loop
 			}
 		}
+		qu.ex.rb.pool.ReturnChannel(ch, false)
 		break
 	}
 	return

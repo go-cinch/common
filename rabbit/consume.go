@@ -177,6 +177,7 @@ GetBatchLoop:
 			continue
 		}
 
+		qu.ex.rb.pool.ReturnChannel(ch, false)
 		if !ok { // Break If empty
 			break GetBatchLoop
 		}
