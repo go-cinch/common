@@ -7,15 +7,16 @@ import (
 )
 
 type Options struct {
-	group          string
-	redisUri       string
-	redisPeriodKey string
-	retention      int
-	maxRetry       int
-	handler        func(ctx context.Context, p Payload) error
-	callback       string
-	clearArchived  int
-	timeout        int
+	group             string
+	redisUri          string
+	redisPeriodKey    string
+	retention         int
+	maxRetry          int
+	handler           func(ctx context.Context, p Payload) error
+	handlerNeedWorker func(worker Worker, ctx context.Context, p Payload) error
+	callback          string
+	clearArchived     int
+	timeout           int
 }
 
 func WithGroup(s string) func(*Options) {
@@ -54,6 +55,14 @@ func WithHandler(fun func(ctx context.Context, p Payload) error) func(*Options) 
 	return func(options *Options) {
 		if fun != nil {
 			getOptionsOrSetDefault(options).handler = fun
+		}
+	}
+}
+
+func WithHandlerNeedWorker(fun func(worker Worker, ctx context.Context, p Payload) error) func(*Options) {
+	return func(options *Options) {
+		if fun != nil {
+			getOptionsOrSetDefault(options).handlerNeedWorker = fun
 		}
 	}
 }

@@ -86,6 +86,8 @@ func (p periodTaskHandler) ProcessTask(ctx context.Context, t *asynq.Task) (err 
 	}()
 	if p.tk.ops.handler != nil {
 		err = p.tk.ops.handler(ctx, payload)
+	} else if p.tk.ops.handlerNeedWorker != nil {
+		err = p.tk.ops.handlerNeedWorker(p.tk, ctx, payload)
 	} else if p.tk.ops.callback != "" {
 		err = p.httpCallback(ctx, payload)
 	} else {
@@ -260,6 +262,15 @@ func (wk Worker) Cron(options ...func(*RunOptions)) (err error) {
 		Timeout:  ops.timeout,
 	}
 	ctx := wk.getDefaultTimeoutCtx()
+	res, err := wk.redis.HGet(ctx, wk.ops.redisPeriodKey, ops.uid).Result()
+	if err == nil {
+		var oldT periodTask
+		json.Unmarshal([]byte(res), &oldT)
+		if oldT.Expr != t.Expr {
+			// remove old task
+			wk.Remove(ctx, t.Uid)
+		}
+	}
 	_, err = wk.redis.HSet(ctx, wk.ops.redisPeriodKey, ops.uid, t.String()).Result()
 	if err != nil {
 		err = errors.WithStack(ErrSaveCron)
