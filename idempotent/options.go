@@ -1,8 +1,6 @@
 package idempotent
 
-import (
-	"github.com/go-redis/redis/v8"
-)
+import "github.com/redis/go-redis/v9"
 
 type Options struct {
 	redis  redis.UniversalClient

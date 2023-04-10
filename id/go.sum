@@ -23,9 +23,13 @@ github.com/fsnotify/fsnotify v1.5.4/go.mod h1:OVB6XrOHzAwXMpEM7uPOzcehqUV2UqJxmV
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/go-cinch/common/log v1.0.0 h1:xamQMSus92Vs3T2ULNWrDVwCBIUytZNb2liRBvgHlTY=
 github.com/go-cinch/common/log v1.0.0/go.mod h1:BkVTtRiYn+Dcxc6ER3J/XfXoDBGJSlpdLvTj/j/ZlI8=
+github.com/go-cinch/common/log v1.0.2 h1:SIuJ8AdfnRCNQ0Ne/el8VQIprz4kRcUH8TXAykmKvy8=
+github.com/go-cinch/common/log v1.0.2/go.mod h1:Ab+67afMFZ0MUHgkdlIBotme40Q9UEzrji7t8rjJGJI=
 github.com/go-kratos/aegis v0.1.2/go.mod h1:jYeSQ3Gesba478zEnujOiG5QdsyF3Xk/8owFUeKcHxw=
 github.com/go-kratos/kratos/v2 v2.5.3 h1:v3F0fIFXh4HJgXprHKPGhRaobggolwPAbaBAjR+wC+Q=
 github.com/go-kratos/kratos/v2 v2.5.3/go.mod h1:5acyLj4EgY428AJnZl2EwCrMV1OVlttQFBum+SghMiA=
+github.com/go-kratos/kratos/v2 v2.6.1 h1:4GSy7I7YGF93c1W83XkWAXNqY7JzNdC3t4l501rl0Xg=
+github.com/go-kratos/kratos/v2 v2.6.1/go.mod h1:OT/2NR0jpfxMgdTdIew8of9cGBab0UKaZRadcgTgqS0=
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
 github.com/go-logr/logr v1.2.3 h1:2DntVwHkVopvECVRSlL5PSo9eG+cAkDCuckLubN+rq0=
 github.com/go-logr/logr v1.2.3/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
