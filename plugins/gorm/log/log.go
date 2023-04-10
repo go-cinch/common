@@ -7,6 +7,8 @@ import (
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -32,10 +34,10 @@ func New(options ...func(*Options)) logger.Interface {
 	)
 
 	if ops.colorful {
-		normalStr = logger.Green + "[%.3fms] " + logger.Reset + logger.BlueBold + "[rows:%v]" + logger.Reset + " %s"
-		slowStr = logger.Yellow + "[%.3fms(slow)] " + logger.Reset + logger.BlueBold + "[rows:%v]" + logger.Reset + " %s"
-		normalErrStr = logger.RedBold + "%s\n" + logger.Reset + logger.Green + "[%.3fms] " + logger.Reset + logger.BlueBold + "[rows:%v]" + logger.Reset + " %s"
-		slowErrStr = logger.RedBold + "%s\n" + logger.Reset + logger.Yellow + "[%.3fms(slow)] " + logger.Reset + logger.BlueBold + "[rows:%v]" + logger.Reset + " %s"
+		normalStr = strings.Join([]string{logger.Green, "[%.3fms] ", logger.Reset, logger.BlueBold, "[rows:%v]", logger.Reset, " %s"}, "")
+		slowStr = strings.Join([]string{logger.Yellow, "[%.3fms(slow)] ", logger.Reset, logger.BlueBold, "[rows:%v]", logger.Reset, " %s"}, "")
+		normalErrStr = strings.Join([]string{logger.RedBold, "%s\n", logger.Reset, logger.Green, "[%.3fms] ", logger.Reset, logger.BlueBold, "[rows:%v]", logger.Reset, " %s"}, "")
+		slowErrStr = strings.Join([]string{logger.RedBold, "%s\n", logger.Reset, logger.Yellow, "[%.3fms(slow)] ", logger.Reset, logger.BlueBold, "[rows:%v]", logger.Reset, " %s"}, "")
 	}
 
 	l := gormLogger{
@@ -80,7 +82,7 @@ func (l gormLogger) Trace(ctx context.Context, begin time.Time, fc func() (strin
 		sql, rows := fc()
 		row := "-"
 		if rows > -1 {
-			row = fmt.Sprintf("%d", rows)
+			row = strconv.FormatInt(rows, 10)
 		}
 		hiddenSql := false
 		if v, ok := ctx.Value(HiddenSql).(bool); ok {

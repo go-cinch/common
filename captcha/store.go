@@ -2,6 +2,7 @@ package captcha
 
 import (
 	"github.com/mojocn/base64Captcha"
+	"strings"
 	"time"
 )
 
@@ -51,7 +52,7 @@ func (st Store) Set(id string, value string) (err error) {
 	if st.memory != nil {
 		err = st.memory.Set(id, value)
 	} else {
-		_, err = st.ops.redis.Set(st.ops.ctx, st.ops.prefix+id, value, st.duration).Result()
+		_, err = st.ops.redis.Set(st.ops.ctx, strings.Join([]string{st.ops.prefix, id}, ""), value, st.duration).Result()
 	}
 	return
 }
@@ -60,10 +61,11 @@ func (st Store) Get(id string, clear bool) (rp string) {
 	if st.memory != nil {
 		rp = st.memory.Get(id, clear)
 	} else {
+		key := strings.Join([]string{st.ops.prefix, id}, "")
 		if !clear {
-			rp, _ = st.ops.redis.Get(st.ops.ctx, st.ops.prefix+id).Result()
+			rp, _ = st.ops.redis.Get(st.ops.ctx, key).Result()
 		} else {
-			v, _ := st.ops.redis.Eval(st.ops.ctx, lua, []string{st.ops.prefix + id}).Result()
+			v, _ := st.ops.redis.Eval(st.ops.ctx, lua, []string{key}).Result()
 			if item, ok := v.(string); ok {
 				rp = item
 			}

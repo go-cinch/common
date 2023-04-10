@@ -10,6 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type I18n struct {
@@ -116,7 +117,7 @@ func readFs(fs embed.FS, dir string) (rp []string) {
 		return
 	}
 	for _, item := range dirs {
-		name := dir + string(os.PathSeparator) + item.Name()
+		name := strings.Join([]string{dir, item.Name()}, string(os.PathSeparator))
 		if dir == "." {
 			name = item.Name()
 		}

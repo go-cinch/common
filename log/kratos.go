@@ -142,7 +142,7 @@ func caller(ops Options) string {
 			continue
 		}
 		if ok && (!strings.HasPrefix(file, logDir) || strings.HasSuffix(file, "_test.go")) && !strings.Contains(file, "src/runtime") {
-			return removeBaseDir(file+":"+strconv.FormatInt(int64(line), 10), ops)
+			return removeBaseDir(strings.Join([]string{file, strconv.Itoa(line)}, ":"), ops)
 		}
 	}
 
@@ -152,7 +152,7 @@ func caller(ops Options) string {
 func removeBaseDir(s string, ops Options) string {
 	sep := string(os.PathSeparator)
 	if !ops.callerSource && strings.HasPrefix(s, commonDir) {
-		s = strings.TrimPrefix(s, path.Dir(strings.TrimSuffix(commonDir, sep))+sep)
+		s = strings.TrimPrefix(s, strings.Join([]string{path.Dir(strings.TrimSuffix(commonDir, sep)), sep}, ""))
 	}
 	if ops.callerPrefix != "" && strings.HasPrefix(s, ops.callerPrefix) {
 		s = strings.TrimPrefix(s, ops.callerPrefix)
@@ -172,9 +172,9 @@ func removeBaseDir(s string, ops Options) string {
 		s1 := strings.Join(arr1, sep)
 		s2 := strings.Join(arr2, sep)
 		if !ops.callerVersion {
-			s = fmt.Sprintf("%s%s%s", s1, sep, s2)
+			s = strings.Join([]string{s1, s2}, sep)
 		} else {
-			s = fmt.Sprintf("%s@%s", s1, s2)
+			s = strings.Join([]string{s1, s2}, "@")
 		}
 	}
 	return s

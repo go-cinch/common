@@ -6,6 +6,7 @@ import (
 	"github.com/houseofcat/turbocookedrabbit/v2/pkg/tcr"
 	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
+	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -52,7 +53,7 @@ func New(dsn string, options ...func(*Options)) (rb *Rabbit) {
 		MaxCacheChannelCount: uint64(ops.maxChannel),
 	}
 	healthPoolConfig := &tcr.PoolConfig{
-		ApplicationName:      name + "-hc",
+		ApplicationName:      strings.Join([]string{name, "hc"}, "-"),
 		URI:                  dsn,
 		Heartbeat:            uint32(ops.heartbeat),
 		ConnectionTimeout:    uint32(ops.timeout),
@@ -144,7 +145,7 @@ func (rb *Rabbit) beforeExchange(options ...func(*ExchangeOptions)) *Exchange {
 	if ops.namePrefix != "" {
 		prefix = ops.namePrefix
 	}
-	ops.name = prefix + ops.name
+	ops.name = strings.Join([]string{prefix, ops.name}, "")
 	ex.ops = *ops
 	ex.rb = rb
 	return &ex
@@ -218,7 +219,7 @@ func (ex *Exchange) beforeQueue(options ...func(*QueueOptions)) *Queue {
 	if ops.namePrefix != "" {
 		prefix = ops.namePrefix
 	}
-	ops.name = prefix + ops.name
+	ops.name = strings.Join([]string{prefix, ops.name}, "")
 	qu.ops = *ops
 	qu.ex = ex
 	return &qu

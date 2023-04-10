@@ -139,7 +139,7 @@ func New(options ...func(*Options)) (tk *Worker) {
 		return
 	}
 	// add group prefix to spilt difference group
-	ops.redisPeriodKey = ops.group + "." + ops.redisPeriodKey
+	ops.redisPeriodKey = strings.Join([]string{"ops.group", ops.redisPeriodKey}, ".")
 	rd := rs.MakeRedisClient().(redis.UniversalClient)
 	client := asynq.NewClient(rs)
 	inspector := asynq.NewInspector(rs)
@@ -147,7 +147,7 @@ func New(options ...func(*Options)) (tk *Worker) {
 	nxLock := nx.New(
 		nx.WithRedis(rd),
 		nx.WithExpire(10),
-		nx.WithKey(ops.redisPeriodKey+".lock"),
+		nx.WithKey(strings.Join([]string{ops.redisPeriodKey, "lock"}, ".")),
 	)
 	// initialize server
 	srv := asynq.NewServer(
@@ -200,7 +200,7 @@ func (wk Worker) Once(options ...func(*RunOptions)) (err error) {
 		err = errors.WithStack(ErrUuidNil)
 		return
 	}
-	t := asynq.NewTask(ops.group+".once", []byte(ops.payload), asynq.TaskID(ops.uid))
+	t := asynq.NewTask(strings.Join([]string{ops.group, "once"}, "."), []byte(ops.payload), asynq.TaskID(ops.uid))
 	taskOpts := []asynq.Option{
 		asynq.Queue(wk.ops.group),
 		asynq.MaxRetry(wk.ops.maxRetry),
@@ -254,7 +254,7 @@ func (wk Worker) Cron(options ...func(*RunOptions)) (err error) {
 	}
 	t := periodTask{
 		Expr:     ops.expr,
-		Group:    ops.group + ".cron",
+		Group:    strings.Join([]string{ops.group, "cron"}, "."),
 		Uid:      ops.uid,
 		Payload:  ops.payload,
 		Next:     next,

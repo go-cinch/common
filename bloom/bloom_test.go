@@ -3,6 +3,7 @@ package bloom
 import (
 	"fmt"
 	"github.com/go-redis/redis/v8"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -16,7 +17,7 @@ func TestNew(t *testing.T) {
 	i := 10000000000
 	arr := make([]string, 0)
 	for i < 10001000000 {
-		arr = append(arr, fmt.Sprintf("%d", i))
+		arr = append(arr, strconv.Itoa(i))
 		if len(arr) == 100000 {
 			err := b.Add(arr...)
 			fmt.Println(i, time.Now(), err)
@@ -26,7 +27,7 @@ func TestNew(t *testing.T) {
 	}
 	j := 10000999000
 	for j < 10001000999 {
-		if b.Exist(fmt.Sprintf("%d", j)) {
+		if b.Exist(strconv.Itoa(j)) {
 			fmt.Printf("%d possible exist\n", j)
 		} else {
 			fmt.Printf("%d not exist\n", j)

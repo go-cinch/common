@@ -23,7 +23,7 @@ func CamelCase(str string) string {
 func CamelCaseLowerFirst(str string) string {
 	camel := CamelCase(str)
 	for i, v := range camel {
-		return string(unicode.ToLower(v)) + camel[i+1:]
+		return strings.Join([]string{string(unicode.ToLower(v)), camel[i+1:]}, "")
 	}
 	return camel
 }

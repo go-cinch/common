@@ -2,11 +2,11 @@ package migrate
 
 import (
 	"database/sql"
-	"fmt"
 	"github.com/go-cinch/common/log"
 	m "github.com/go-sql-driver/mysql"
 	migrate "github.com/rubenv/sql-migrate"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -69,19 +69,29 @@ func Do(options ...func(*Options)) (err error) {
 
 	rollback := os.Getenv("SQL_MIGRATE_ROLLBACK")
 	if rollback != "" {
+		log.
+			WithContext(ops.ctx).
+			WithField("sql", rollback).
+			Info("exec rollback")
 		arr := strings.Split(rollback, "; ")
 		for i, item := range arr {
+			if strings.TrimSpace(item) == "" {
+				continue
+			}
 			_, err = db.ExecContext(ops.ctx, item)
 			if err != nil {
 				log.
 					WithContext(ops.ctx).
 					WithError(err).
-					WithField("rollback.sql", rollback).
-					WithField(fmt.Sprintf("rollback.%d", i+1), item).
+					WithField(strings.Join([]string{"sql", strconv.Itoa(i + 1)}, "."), item).
 					Error("exec rollback failed")
 				return
 			}
 		}
+		log.
+			WithContext(ops.ctx).
+			WithField("sql", rollback).
+			Info("exec rollback success")
 	}
 
 	migrate.SetTable(ops.changeTable)
@@ -128,7 +138,7 @@ func database(ops *Options) (err error) {
 	if err != nil {
 		return
 	}
-	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", dbname))
+	_, err = db.Exec(strings.Join([]string{"CREATE DATABASE IF NOT EXISTS `", dbname, "`"}, ""))
 	if err != nil {
 		log.
 			WithContext(ops.ctx).
@@ -141,7 +151,7 @@ func database(ops *Options) (err error) {
 func acquireLock(ops *Options, db *sql.DB) (f bool, err error) {
 	// GET_LOCK will be blocked if another session already acquired the lock
 	// timeout 5s
-	q := fmt.Sprintf("SELECT GET_LOCK('%v', 5)", ops.lockName)
+	q := strings.Join([]string{"SELECT GET_LOCK('", "', 5)"}, ops.lockName)
 	err = db.QueryRow(q).Scan(&f)
 
 	if err != nil {
@@ -165,7 +175,7 @@ func acquireLock(ops *Options, db *sql.DB) (f bool, err error) {
 }
 
 func releaseLock(ops *Options, db *sql.DB) (err error) {
-	q := fmt.Sprintf("SELECT RELEASE_LOCK('%v')", ops.lockName)
+	q := strings.Join([]string{"SELECT RELEASE_LOCK('", "')"}, ops.lockName)
 	_, err = db.Exec(q)
 
 	if err != nil {

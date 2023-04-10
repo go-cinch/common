@@ -2,7 +2,7 @@ package bloom
 
 import (
 	"context"
-	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -65,7 +65,7 @@ func (b Bloom) offset(str string) (list []string) {
 	list = make([]string, 0)
 	for _, f := range b.ops.hash {
 		offset := f(str)
-		list = append(list, fmt.Sprintf("%d", offset))
+		list = append(list, strconv.FormatUint(offset, 10))
 	}
 	return
 }

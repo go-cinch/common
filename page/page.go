@@ -2,10 +2,10 @@ package page
 
 import (
 	"context"
-	"fmt"
 	"github.com/go-cinch/common/log"
 	"gorm.io/gorm"
 	"reflect"
+	"strings"
 )
 
 const (
@@ -125,15 +125,23 @@ func (q *Query) Find(model interface{}) {
 				}
 				db.Joins(
 					// add Primary index before join, improve query efficiency
-					fmt.Sprintf(
-						"JOIN (?) AS `OFFSET_T` ON `%s`.`%s` = `OFFSET_T`.`OFFSET_KEY`",
+					strings.Join([]string{
+						"JOIN (?) AS `OFFSET_T` ON `",
 						db.Statement.Table,
+						"`.`",
 						page.Primary,
-					),
+						"` = `OFFSET_T`.`OFFSET_KEY`",
+					}, ""),
 					db.
 						Session(&gorm.Session{}).
 						Select(
-							fmt.Sprintf("`%s`.`%s` AS `OFFSET_KEY`", db.Statement.Table, page.Primary),
+							strings.Join([]string{
+								"`",
+								db.Statement.Table,
+								"`.`",
+								page.Primary,
+								"` AS `OFFSET_KEY`",
+							}, ""),
 						).
 						Limit(limit).
 						Offset(offset),
@@ -182,15 +190,23 @@ func (q *Query) Scan(model interface{}) {
 				}
 				db.Joins(
 					// add Primary index before join, improve query efficiency
-					fmt.Sprintf(
-						"JOIN (?) AS `OFFSET_T` ON `%s`.`%s` = `OFFSET_T`.`OFFSET_KEY`",
+					strings.Join([]string{
+						"JOIN (?) AS `OFFSET_T` ON `",
 						db.Statement.Table,
+						"`.`",
 						page.Primary,
-					),
+						"` = `OFFSET_T`.`OFFSET_KEY`",
+					}, ""),
 					db.
 						Session(&gorm.Session{}).
 						Select(
-							fmt.Sprintf("`%s`.`%s` AS `OFFSET_KEY`", db.Statement.Table, page.Primary),
+							strings.Join([]string{
+								"`",
+								db.Statement.Table,
+								"`.`",
+								page.Primary,
+								"` AS `OFFSET_KEY`",
+							}, ""),
 						).
 						Limit(limit).
 						Offset(offset),
