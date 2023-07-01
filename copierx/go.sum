@@ -1,10 +1,10 @@
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/golang-module/carbon/v2 v2.2.2 h1:iMvcbQtBuuBl2sxoCjIu9rUnJuxoIFfoJ96L6r2YjSs=
-github.com/golang-module/carbon/v2 v2.2.2/go.mod h1:LdzRApgmDT/wt0eNT8MEJbHfJdSqCtT46uZhfF30dqI=
-github.com/jinzhu/copier v0.3.5 h1:GlvfUwHk62RokgqVNvYsku0TATCF7bAHVwEXoBh3iJg=
-github.com/jinzhu/copier v0.3.5/go.mod h1:DfbEm0FYsaqBcKcFuvmOZb218JkPGtvSHsKg8S8hyyg=
+github.com/golang-module/carbon/v2 v2.2.3 h1:WvGIc5+qzq9drNzH+Gnjh1TZ0JgDY/IA+m2Dvk7Qm4Q=
+github.com/golang-module/carbon/v2 v2.2.3/go.mod h1:LdzRApgmDT/wt0eNT8MEJbHfJdSqCtT46uZhfF30dqI=
+github.com/jinzhu/copier v0.3.6-0.20230513005645-83982c7a89de h1:lgb2Oo/9SJXjAnIEa5CjIktbOu2KG2f2lhVVsaJA3nY=
+github.com/jinzhu/copier v0.3.6-0.20230513005645-83982c7a89de/go.mod h1:DfbEm0FYsaqBcKcFuvmOZb218JkPGtvSHsKg8S8hyyg=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

@@ -61,6 +61,11 @@ func (b Bloom) Exist(str string) (ok bool) {
 	return
 }
 
+func (b Bloom) Flush() {
+	b.ops.redis.Del(b.getDefaultTimeoutCtx(), b.ops.key)
+	return
+}
+
 func (b Bloom) offset(str string) (list []string) {
 	list = make([]string, 0)
 	for _, f := range b.ops.hash {

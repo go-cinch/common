@@ -1,11 +1,11 @@
 module github.com/go-cinch/common/log
 
-go 1.18
+go 1.20
 
-require github.com/go-kratos/kratos/v2 v2.6.1
+require github.com/go-kratos/kratos/v2 v2.6.2
 
 require (
-	github.com/go-kratos/aegis v0.1.4 // indirect
+	github.com/go-kratos/aegis v0.2.0 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-playground/form/v4 v4.2.0 // indirect

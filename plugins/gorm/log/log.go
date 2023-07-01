@@ -12,12 +12,23 @@ import (
 	"time"
 )
 
-const HiddenSql = "gorm.hidden.sql"
-
 type gormLogger struct {
 	ops                                          Options
 	level                                        logger.LogLevel
 	normalStr, normalErrStr, slowStr, slowErrStr string
+}
+
+type hiddenSqlCxtKey struct{}
+
+// NewHiddenSqlContext returns a new Context with hidden sql
+func NewHiddenSqlContext(ctx context.Context) context.Context {
+	return context.WithValue(ctx, hiddenSqlCxtKey{}, hiddenSqlCxtKey{})
+}
+
+// FromHiddenSqlContext hidden sql or not
+func FromHiddenSqlContext(ctx context.Context) (ok bool) {
+	_, ok = ctx.Value(hiddenSqlCxtKey{}).(hiddenSqlCxtKey)
+	return
 }
 
 func New(options ...func(*Options)) logger.Interface {
@@ -84,11 +95,7 @@ func (l gormLogger) Trace(ctx context.Context, begin time.Time, fc func() (strin
 		if rows > -1 {
 			row = strconv.FormatInt(rows, 10)
 		}
-		hiddenSql := false
-		if v, ok := ctx.Value(HiddenSql).(bool); ok {
-			hiddenSql = v
-		}
-		if hiddenSql {
+		if FromHiddenSqlContext(ctx) {
 			sql = "(sql is hidden)"
 		}
 		switch {

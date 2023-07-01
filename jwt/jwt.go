@@ -112,12 +112,8 @@ func AppendToReplyHeader(ctx context.Context, us ...User) {
 		u = FromServerContext(ctx)
 	}
 	if tr, ok := transport.FromServerContext(ctx); ok {
-		if tr.Kind() == transport.KindGRPC {
-			if tr.ReplyHeader() != nil {
-				tr.ReplyHeader().Set("x-md-global-code", u.Code)
-				tr.ReplyHeader().Set("x-md-global-platform", u.Platform)
-			}
-		}
+		tr.ReplyHeader().Set("x-md-global-code", u.Code)
+		tr.ReplyHeader().Set("x-md-global-platform", u.Platform)
 	}
 	return
 }

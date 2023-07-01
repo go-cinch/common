@@ -37,6 +37,7 @@ func (page *Page) Query(db *gorm.DB) (rp *Query) {
 	if page.ctx == nil {
 		page.ctx = context.Background()
 	}
+	rp.db.WithContext(page.ctx)
 	rp.page = page
 	return
 }

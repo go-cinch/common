@@ -1,3 +1,3 @@
 module github.com/go-cinch/common/constant
 
-go 1.18
+go 1.20

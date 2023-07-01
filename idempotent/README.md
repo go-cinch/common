@@ -16,7 +16,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-cinch/common/idempotent"
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
