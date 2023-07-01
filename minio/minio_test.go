@@ -7,10 +7,10 @@ import (
 
 var (
 	m, _ = New(
-		WithEndpoint("minio-api.zenwell.cn"),
+		WithEndpoint("minio-api.go-cinch.top"),
 		WithKey("super"),
-		WithSecret("zenwell123456"),
-		WithBucket("zenwell"),
+		WithSecret("cinch123"),
+		WithBucket("cinch"),
 	)
 )
 
