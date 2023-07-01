@@ -8,7 +8,7 @@ require (
 	github.com/go-cinch/common/i18n v1.0.3
 	github.com/go-kratos/kratos/v2 v2.6.2
 	golang.org/x/text v0.10.0
-	google.golang.org/grpc v1.56.1
+	google.golang.org/grpc v1.46.2
 )
 
 require (

@@ -6,7 +6,7 @@ require (
 	github.com/go-kratos/kratos/v2 v2.6.2
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/golang-module/carbon/v2 v2.2.3
-	google.golang.org/grpc v1.56.1
+	google.golang.org/grpc v1.46.2
 )
 
 require (
