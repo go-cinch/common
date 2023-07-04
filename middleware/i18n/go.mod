@@ -5,7 +5,7 @@ go 1.20
 replace github.com/go-cinch/common/i18n => ../../i18n
 
 require (
-	github.com/go-cinch/common/i18n v1.0.3
+	github.com/go-cinch/common/i18n v1.0.4
 	github.com/go-kratos/kratos/v2 v2.6.2
 	golang.org/x/text v0.10.0
 	google.golang.org/grpc v1.46.2

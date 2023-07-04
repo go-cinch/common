@@ -3,6 +3,7 @@ package i18n
 import (
 	"fmt"
 	"golang.org/x/text/language"
+	"gopkg.in/yaml.v3"
 	"testing"
 )
 
@@ -10,7 +11,9 @@ import (
 // var fs embed.FS
 
 func TestNew(t *testing.T) {
-	i := New()
+	i := New(
+		WithFormat("yaml", yaml.Unmarshal),
+	)
 	// 1. add dir
 	i.Add("./locales")
 
@@ -22,5 +25,5 @@ func TestNew(t *testing.T) {
 	// i.AddFs(fs)
 
 	fmt.Println(i.T("common.hello"))
-	fmt.Println(i.Select(language.Chinese).T("common.hello"))
+	fmt.Println(i.Select(language.Vietnamese).T("common.hello"))
 }

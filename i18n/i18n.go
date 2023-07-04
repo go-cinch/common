@@ -27,13 +27,15 @@ func New(options ...func(*Options)) (rp *I18n) {
 	}
 	bundle := i18n.NewBundle(ops.language)
 	localizer := i18n.NewLocalizer(bundle, ops.language.String())
-	switch ops.format {
-	case "toml":
-		bundle.RegisterUnmarshalFunc("toml", toml.Unmarshal)
-	case "json":
-		bundle.RegisterUnmarshalFunc("json", json.Unmarshal)
-	default:
-		bundle.RegisterUnmarshalFunc("yml", yaml.Unmarshal)
+
+	// register default formats
+	bundle.RegisterUnmarshalFunc("yml", yaml.Unmarshal)
+	bundle.RegisterUnmarshalFunc("yaml", yaml.Unmarshal)
+	bundle.RegisterUnmarshalFunc("toml", toml.Unmarshal)
+	bundle.RegisterUnmarshalFunc("json", json.Unmarshal)
+	// register custom formats
+	for k, v := range ops.format {
+		bundle.RegisterUnmarshalFunc(k, v)
 	}
 	rp = &I18n{
 		ops:       *ops,
