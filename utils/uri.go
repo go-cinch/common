@@ -43,7 +43,10 @@ func ParseRedisURI(uri string) (client redis.UniversalClient, err error) {
 			username = ""
 			password = ""
 		}
-		client = redis.NewUniversalClient(&redis.UniversalOptions{
+		// if poolSize<=0, use default 10 connections per every available CPU as reported by runtime.GOMAXPROCS.(not means poolSize=10)
+		// https://github.com/redis/go-redis/blob/v9.0.5/options.go#L102
+		poolSize, _ := strconv.Atoi(q.Get("poolSize"))
+		ops := redis.UniversalOptions{
 			Addrs:            addrs,
 			MasterName:       master,
 			DB:               db,
@@ -51,7 +54,15 @@ func ParseRedisURI(uri string) (client redis.UniversalClient, err error) {
 			Password:         password,
 			SentinelUsername: sentinelUsername,
 			SentinelPassword: sentinelPassword,
-		})
+			PoolSize:         poolSize,
+		}
+		if poolSize > 0 {
+			ops.PoolSize = poolSize
+		}
+		// use context.WithTimeout must set ReadTimeout and WriteTimeout
+		// https://redis.uptrace.dev/guide/go-redis-debugging.html#timeouts
+		ops.ContextTimeoutEnabled = true
+		client = redis.NewUniversalClient(&ops)
 		return
 	}
 	err = errors.Errorf("invalid redis uri")

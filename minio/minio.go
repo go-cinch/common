@@ -184,3 +184,11 @@ func (m *Minio) Preview(ctx context.Context, object string) (reply string, err e
 	reply = uri.String()
 	return
 }
+
+func (m *Minio) FPutObject(ctx context.Context, object, path string) (*minio.UploadInfo, error) {
+	info, err := m.client.FPutObject(ctx, m.ops.bucket, object, path, minio.PutObjectOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return &info, nil
+}

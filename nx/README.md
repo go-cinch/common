@@ -1,11 +1,8 @@
 # Nx
 
-
 simple nx lock based on redis.
 
-
 ## Usage
-
 
 ```bash
 go get -u github.com/go-cinch/common/nx
@@ -71,16 +68,12 @@ func main() {
 }
 ```
 
-
 ## Options
-
 
 - `WithRedis` - redis client, default 127.0.0.1:6379
 - `WithKey` - redis cache key, default nx.lock
 - `WithExpire` - key expire time, default 1 minute, avoid deadlock, it should not be set too long
 
-
 ## Caution
-
 
 avoid deadlock, `MustLock` will auto retry 400 times to get lock in 10s, if failed, u will get an error

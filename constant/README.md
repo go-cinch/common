@@ -1,11 +1,8 @@
 # Constant
 
-
-constant int64 and uint64.
-
+constant value.
 
 ## Usage
-
 
 ```bash
 go get -u github.com/go-cinch/common/constant

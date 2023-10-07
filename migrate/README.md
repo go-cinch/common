@@ -1,16 +1,13 @@
 # Migrate
 
-
 db migration based on [sql-migrate](https://github.com/rubenv/sql-migrate), only use migrate.Up.
-
 
 ## Usage
 
-
 ### sql files
 
-
 prepare sql files before migrate
+
 ```bash
 mkdir db
 
@@ -41,12 +38,10 @@ EOF
 ```
 
 > caution: must set file header!  
--- +migrate Up  
--- SQL in section 'Up' is executed when this migration is applied
-
+> -- +migrate Up  
+> -- SQL in section 'Up' is executed when this migration is applied
 
 ### Do
-
 
 ```bash
 go get -u github.com/go-cinch/common/migrate
@@ -72,13 +67,12 @@ func main() {
 }
 ```
 
-
 ## Options
-
 
 - `WithCtx` - context
 - `WithDriver` - database driver, default mysql
-- `WithUri` - database uri, if database not exist will auto create, default root:root@tcp(127.0.0.1:3306)/test?charset=utf8mb4&parseTime=True&timeout=10000ms
+- `WithUri` - database uri, if database not exist will auto create, default root:root@tcp(127.0.0.1:3306)
+  /test?charset=utf8mb4&parseTime=True&timeout=10000ms
 - `WithLockName` - lock name, will set unique lock before exec sql script, default MigrationLock
 - `WithChangeTable` - change history table name, default schema_migrations
 - `WithBefore` - callback function, custom callback before exec sql script, after acquired migration lock

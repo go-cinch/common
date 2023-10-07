@@ -1,11 +1,9 @@
 # Rabbit
 
-
-rabbitmq connection pool based on [amqp](https://github.com/streadway/amqp) and [turbocookedrabbit](https://github.com/houseofcat/turbocookedrabbit).
-
+rabbitmq connection pool based on [amqp](https://github.com/streadway/amqp)
+and [turbocookedrabbit](https://github.com/houseofcat/turbocookedrabbit).
 
 ## Usage
-
 
 ```bash
 go get -u github.com/go-cinch/common/rabbit
@@ -117,54 +115,47 @@ func consumer(ctx context.Context, q string, d amqp.Delivery) bool {
 }
 ```
 
-
 ## Options
 
-
 ### Rabbit
-  
 
 - `WithCtx` - context
-- `WithName` - app name  
+- `WithName` - app name
 - `WithHeartbeat` - pool heartbeat, default 1 second
 - `WithTimeout` - connection timeout, default 10 second
 - `WithMaxChannel` - max channel count, default 50
 - `WithMaxConnection` - max connection count, default 10
 - `WithHealthCheckInterval` - healthcheck interval, default 100 milli second
 
-
 ### ExchangeOptions
 
 - `WithExchangeName` - name
-- `WithExchangeKind` - kind, default direct 
-- `WithExchangeDurable` - durable, default true 
+- `WithExchangeKind` - kind, default direct
+- `WithExchangeDurable` - durable, default true
 - `WithExchangeDeclare` - declare, default true
-- `WithExchangeAutoDelete` - auto delete, default false 
-- `WithExchangeInternal` - internal exchange, do not accept publishings, default false   
-- `WithExchangeNoWait` - declare without waiting for a confirmation from the server, default false  
-- `WithExchangeNamePrefix` - exchange name prefix 
-- `WithExchangeArgs` - other args 
+- `WithExchangeAutoDelete` - auto delete, default false
+- `WithExchangeInternal` - internal exchange, do not accept publishings, default false
+- `WithExchangeNoWait` - declare without waiting for a confirmation from the server, default false
+- `WithExchangeNamePrefix` - exchange name prefix
+- `WithExchangeArgs` - other args
 
-
-### QueueOptions  
+### QueueOptions
 
 - `WithQueueName` - name
-- `WithQueueDurable` - durable, default true 
-- `WithQueueDeclare` - declare, default true  
-- `WithQueueBind` - bind route key, default true 
-- `WithQueueRouteKeys` - route key array  
-- `WithQueueAutoDelete` - auto delete, default false 
-- `WithQueueExclusive` - the server will ensure that this is the sole consumer from this queue, default false 
-- `WithQueueNoWait` - declare without waiting for a confirmation from the server, default false 
-- `WithQueueArgs` - other args  
-- `WithQueueBindArgs` - other bind args 
+- `WithQueueDurable` - durable, default true
+- `WithQueueDeclare` - declare, default true
+- `WithQueueBind` - bind route key, default true
+- `WithQueueRouteKeys` - route key array
+- `WithQueueAutoDelete` - auto delete, default false
+- `WithQueueExclusive` - the server will ensure that this is the sole consumer from this queue, default false
+- `WithQueueNoWait` - declare without waiting for a confirmation from the server, default false
+- `WithQueueArgs` - other args
+- `WithQueueBindArgs` - other bind args
 - `WithQueueDeadLetterName` - dead letter name
-- `WithQueueDeadLetterKey` - dead letter route key 
-- `WithQueueMessageTTL` - msg expiration 
-   
+- `WithQueueDeadLetterKey` - dead letter route key
+- `WithQueueMessageTTL` - msg expiration
 
-### PublishOptions  
-
+### PublishOptions
 
 - `WithPublishCtx` - context
 - `WithPublishMaxRetryCount` - max retry count, default 3
@@ -180,13 +171,14 @@ func consumer(ctx context.Context, q string, d amqp.Delivery) bool {
 ### ConsumeOptions
 
 - `WithConsumeQosPrefetchCount` - qos, default 2
-- `WithConsumeConsumer` - consumer name 
-- `WithConsumeAutoAck` - auto confirm, default false 
-- `WithConsumeExclusive` - exclusive, default false 
-- `WithConsumeNoWait` - do not wait for the server to confirm the request and immediately begin deliveries, default false 
+- `WithConsumeConsumer` - consumer name
+- `WithConsumeAutoAck` - auto confirm, default false
+- `WithConsumeExclusive` - exclusive, default false
+- `WithConsumeNoWait` - do not wait for the server to confirm the request and immediately begin deliveries, default
+  false
 - `WithConsumeNackRequeue` - requeue when delivery ack is false, default false
-- `WithConsumeNackRetry` - retry when delivery ack is false, default false 
+- `WithConsumeNackRetry` - retry when delivery ack is false, default false
 - `WithConsumeNackMaxRetryCount` - max retry count when NackRetry is true, default 5
-- `WithConsumeAutoRequestId` - auth generate request id 
-- `WithConsumeOneContext` - consume one ctx  
+- `WithConsumeAutoRequestId` - auth generate request id
+- `WithConsumeOneContext` - consume one ctx
 - `WithConsumeArgs` - other args 

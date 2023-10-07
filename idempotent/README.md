@@ -1,11 +1,8 @@
 # Idempotent
 
-
 api idempotent tool based on redis lua script.
 
-
 ## Usage
-
 
 ```bash
 go get -u github.com/go-cinch/common/idempotent
@@ -38,9 +35,7 @@ func main() {
 }
 ```
 
-
 ## Options
-
 
 - `WithRedis` - redis client, default 127.0.0.1:6379
 - `WithPrefix` - cache key prefix, default idempotent

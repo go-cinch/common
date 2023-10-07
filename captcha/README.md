@@ -1,11 +1,8 @@
 # Captcha
 
-
 base64 captcha otp based on redis and [base64Captcha](https://github.com/mojocn/base64Captcha).
 
-
 ## Usage
-
 
 ```bash
 go get -u github.com/go-cinch/common/captcha
@@ -37,9 +34,7 @@ func main() {
 }
 ```
 
-
 ## Options
-
 
 - `WithRedis` - redis client, default 127.0.0.1:6379
 - `WithCtx` - context, convenient log tracking

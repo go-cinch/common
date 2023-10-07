@@ -11,12 +11,17 @@
 - `Log` - [simple log wrapper based on kratos log.](https://github.com/go-cinch/common/tree/master/log)
 - `Middleware` 
   - `I18n` - [simple i18n middleware, used under cinch layout.](https://github.com/go-cinch/common/tree/master/middleware/i18n)
+  - `Tenant` - simple `tenant` middleware, used under layout.
   - `Trace` - [simple trace middleware, set trace-id to response header, used under cinch layout.](https://github.com/go-cinch/common/tree/master/middleware/trace)
 - `Migrate` - [db migration based on sql-migrate, only use migrate.Up.](https://github.com/go-cinch/common/tree/master/migrate)
 - `Nx` - [simple nx lock based on redis.](https://github.com/go-cinch/common/tree/master/nx)
 - `Page` - [simple page with gorm, find multiple pieces of data is helpful.](https://github.com/go-cinch/common/tree/master/page)
 - `Plugins`
+  - `gorm/filter` - gorm gen tools custom sql query filter.
   - `gorm/log` - [common/log gorm logger plugin, used to print sql.](https://github.com/go-cinch/common/tree/master/plugins/gorm/log)
+  - `gorm/tenant` - gorm multi tenant support.
+- `Proto`
+  - `params` - custom param proto file.
 - `Rabbit` - [rabbitmq connection pool based on amqp and turbocookedrabbit.](https://github.com/go-cinch/common/tree/master/rabbit)
 - `Utils` - [useful utils.](https://github.com/go-cinch/common/tree/master/utils)
 - `Worker` - [distributed async task worker based on asynq.](https://github.com/go-cinch/common/tree/master/worker)

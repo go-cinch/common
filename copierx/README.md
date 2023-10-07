@@ -1,6 +1,5 @@
 # Copierx
 
-
 object [copier](https://github.com/jinzhu/copier) with [carbon](https://github.com/golang-module/carbon).
 
 - carbon.DateTime to string
@@ -8,14 +7,11 @@ object [copier](https://github.com/jinzhu/copier) with [carbon](https://github.c
 - carbon.Date to string
 - string to carbon.Date
 
-
 ## Usage
-
 
 ```bash
 go get -u github.com/go-cinch/common/copierx
 ```
-
 
 ```go
 import (

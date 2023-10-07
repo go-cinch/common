@@ -2,21 +2,20 @@ package i18n
 
 import (
 	"embed"
-	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
 )
 
 type Options struct {
-	format   map[string]i18n.UnmarshalFunc
+	format   string
 	language language.Tag
 	files    []string
 	fs       embed.FS
 }
 
-func WithFormat(format string, f i18n.UnmarshalFunc) func(*Options) {
+func WithFormat(format string) func(*Options) {
 	return func(options *Options) {
-		if format != "" && f != nil {
-			getOptionsOrSetDefault(options).format[format] = f
+		if format != "" {
+			getOptionsOrSetDefault(options).format = format
 		}
 	}
 }
@@ -46,7 +45,7 @@ func WithFs(fs embed.FS) func(*Options) {
 func getOptionsOrSetDefault(options *Options) *Options {
 	if options == nil {
 		return &Options{
-			format:   make(map[string]i18n.UnmarshalFunc),
+			format:   "yml",
 			language: language.English,
 			files:    []string{},
 		}
