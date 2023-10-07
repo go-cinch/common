@@ -10,11 +10,11 @@ replace (
 )
 
 require (
-	github.com/go-cinch/common/log v1.0.3
-	github.com/go-cinch/common/migrate v1.0.3
-	github.com/go-cinch/common/plugins/gorm/log v1.0.3
-	github.com/go-cinch/common/utils v1.0.3
-	github.com/go-kratos/kratos/v2 v2.6.2
+	github.com/go-cinch/common/log v1.0.4
+	github.com/go-cinch/common/migrate v1.0.4
+	github.com/go-cinch/common/plugins/gorm/log v1.0.4
+	github.com/go-cinch/common/utils v1.0.4
+	github.com/go-kratos/kratos/v2 v2.7.0
 	github.com/go-sql-driver/mysql v1.7.1
 	gorm.io/driver/mysql v1.5.1
 	gorm.io/gorm v1.25.2
@@ -28,7 +28,7 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/r3labs/diff/v3 v3.0.1 // indirect
-	github.com/redis/go-redis/v9 v9.0.5 // indirect
+	github.com/redis/go-redis/v9 v9.2.1 // indirect
 	github.com/rubenv/sql-migrate v1.5.1 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
