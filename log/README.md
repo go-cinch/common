@@ -1,27 +1,22 @@
 # Log
 
-
 simple log wrapper based on [kratos log](https://go-kratos.dev/en/docs/component/log).
-
 
 ## Characteristic
 
-
 - `Caller` - auto get line number
 - `Format` - print normal str or format str by Info/Warn/Error, no need Infof/Warnf/Errorf
-- `WithContext` - support [OpenTelemetry](https://github.com/open-telemetry/opentelemetry-go) log tracking by WithContext
+- `WithContext` - support [OpenTelemetry](https://github.com/open-telemetry/opentelemetry-go) log tracking by
+  WithContext
 - `WithError` - print err field by WithError
 - `WithField` - print custom field by WithField/WithFields
 - `Custom Plugin` - support add custom log plugin, such as logrus/zap
 
-
 ## Usage
-
 
 ```bash
 go get -u github.com/go-cinch/common/log
 ```
-
 
 ```go
 import (
@@ -89,9 +84,7 @@ func main() {
 }
 ```
 
-
 ## Options
-
 
 - `WithLevel - log level, default debug
 - `WithLogger` - kratos logger, default kratosLog.DefaultLogger
