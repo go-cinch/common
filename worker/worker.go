@@ -28,14 +28,15 @@ type Worker struct {
 }
 
 type periodTask struct {
-	Expr      string `json:"expr"` // cron expr github.com/robfig/cron/v3
-	Group     string `json:"group"`
-	Uid       string `json:"uid"`
-	Payload   string `json:"payload"`
-	Next      int64  `json:"next"`      // next schedule unix timestamp
-	Processed int64  `json:"processed"` // run times
-	MaxRetry  int    `json:"maxRetry"`
-	Timeout   int    `json:"timeout"`
+	Expr            string `json:"expr"` // cron expr github.com/robfig/cron/v3
+	Group           string `json:"group"`
+	Uid             string `json:"uid"`
+	Payload         string `json:"payload"`
+	Next            int64  `json:"next"`      // next schedule unix timestamp
+	Processed       int64  `json:"processed"` // run times
+	MaxRetry        int    `json:"maxRetry"`
+	MaxArchivedTime int    `json:"maxArchivedTime"`
+	Timeout         int    `json:"timeout"`
 }
 
 func (p periodTask) String() (str string) {
@@ -157,6 +158,7 @@ func New(options ...func(*Options)) (tk *Worker) {
 			Queues: map[string]int{
 				ops.group: 10,
 			},
+			RetryDelayFunc: ops.retryDelayFunc,
 		},
 	)
 	go func() {
@@ -360,12 +362,12 @@ func (wk Worker) clearArchived() {
 	}
 	ctx := wk.getDefaultTimeoutCtx()
 	for _, item := range list {
-		last := carbon.Time2Carbon(item.LastFailedAt)
+		last := carbon.CreateFromStdTime(item.LastFailedAt)
 		if !last.IsZero() && item.Retried < item.MaxRetry {
 			continue
 		}
 		uid := item.ID
-		var flag bool
+		var archivedTime int
 		if strings.HasSuffix(item.Type, ".cron") {
 			// cron task
 			t, e := wk.redis.HGet(ctx, wk.ops.redisPeriodKey, uid).Result()
@@ -373,32 +375,20 @@ func (wk Worker) clearArchived() {
 				var task periodTask
 				task.FromString(t)
 				next, _ := getNext(task.Expr, task.Next)
-				diff := next - task.Next
-				if diff <= 60 {
-					if carbon.Now().Gt(last.AddMinutes(5)) {
-						flag = true
-					}
-				} else if diff <= 600 {
-					if carbon.Now().Gt(last.AddMinutes(30)) {
-						flag = true
-					}
-				} else if diff <= 3600 {
-					if carbon.Now().Gt(last.AddHours(2)) {
-						flag = true
-					}
-				} else {
-					if carbon.Now().Gt(last.AddHours(5)) {
-						flag = true
-					}
+				// default archived 1/2 task interval
+				archivedTime = int((next - task.Next) / 2)
+				if task.MaxArchivedTime > 0 {
+					archivedTime = task.MaxArchivedTime
 				}
 			}
 		} else {
-			// once task, has failed for more than 5 minutes
-			if carbon.Now().Gt(last.AddMinutes(5)) {
-				flag = true
+			// once task default archived 5 minute
+			archivedTime = 300
+			if wk.ops.maxArchivedTime > 0 {
+				archivedTime = wk.ops.maxArchivedTime
 			}
 		}
-		if flag {
+		if carbon.Now().Gt(last.AddSeconds(archivedTime)) {
 			wk.inspector.DeleteTask(wk.ops.group, uid)
 		}
 	}
@@ -415,9 +405,9 @@ func getNext(expr string, timestamp int64) (next int64, err error) {
 	if err != nil {
 		return
 	}
-	t := carbon.Now().Carbon2Time()
+	t := carbon.Now().ToStdTime()
 	if timestamp > 0 {
-		t = carbon.CreateFromTimestamp(timestamp).Carbon2Time()
+		t = carbon.CreateFromTimestamp(timestamp).ToStdTime()
 	}
 	next = e.Next(t).Unix()
 	return

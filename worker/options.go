@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"github.com/hibiken/asynq"
 	"reflect"
 	"time"
 )
@@ -12,10 +13,12 @@ type Options struct {
 	redisPeriodKey    string
 	retention         int
 	maxRetry          int
+	retryDelayFunc    func(n int, e error, t *asynq.Task) time.Duration
 	handler           func(ctx context.Context, p Payload) error
 	handlerNeedWorker func(worker Worker, ctx context.Context, p Payload) error
 	callback          string
 	clearArchived     int
+	maxArchivedTime   int
 	timeout           int
 }
 
@@ -51,6 +54,12 @@ func WithMaxRetry(count int) func(*Options) {
 	}
 }
 
+func WithRetryDelayFunc(f func(n int, e error, t *asynq.Task) time.Duration) func(*Options) {
+	return func(options *Options) {
+		getOptionsOrSetDefault(options).retryDelayFunc = f
+	}
+}
+
 func WithHandler(fun func(ctx context.Context, p Payload) error) func(*Options) {
 	return func(options *Options) {
 		if fun != nil {
@@ -81,6 +90,14 @@ func WithClearArchived(second int) func(*Options) {
 	}
 }
 
+func WithMaxArchivedTime(second int) func(*Options) {
+	return func(options *Options) {
+		if second > 0 {
+			getOptionsOrSetDefault(options).maxArchivedTime = second
+		}
+	}
+}
+
 func WithTimeout(second int) func(*Options) {
 	return func(options *Options) {
 		if second > 0 {
@@ -105,18 +122,19 @@ func getOptionsOrSetDefault(options *Options) *Options {
 }
 
 type RunOptions struct {
-	uid       string
-	group     string
-	payload   string
-	expr      string          // only period task
-	in        *time.Duration  // only once task
-	at        *time.Time      // only once task
-	now       bool            // only once task
-	retention int             // only once task
-	replace   bool            // only once task
-	ctx       context.Context // only once task
-	maxRetry  int
-	timeout   int
+	uid             string
+	group           string
+	payload         string
+	expr            string          // only period task
+	in              *time.Duration  // only once task
+	at              *time.Time      // only once task
+	now             bool            // only once task
+	retention       int             // only once task
+	replace         bool            // only once task
+	ctx             context.Context // only once task
+	maxRetry        int
+	maxArchivedTime int
+	timeout         int
 }
 
 func WithRunUuid(s string) func(*RunOptions) {
@@ -194,6 +212,14 @@ func WithRunTimeout(second int) func(*RunOptions) {
 	return func(options *RunOptions) {
 		if second > 0 {
 			getRunOptionsOrSetDefault(options).timeout = second
+		}
+	}
+}
+
+func WithRunMaxArchivedTime(second int) func(*RunOptions) {
+	return func(options *RunOptions) {
+		if second > 0 {
+			getRunOptionsOrSetDefault(options).maxArchivedTime = second
 		}
 	}
 }
