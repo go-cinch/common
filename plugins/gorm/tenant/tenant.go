@@ -54,10 +54,33 @@ func New(options ...func(*Options)) (*Tenant, error) {
 	if len(tenantIds) == 0 {
 		return nil, errors.New("at least one tenant")
 	}
+	tenantDBs := make(map[string]*gorm.DB)
+	if ops.skipMigrate {
+		for _, id := range tenantIds {
+			dsn := ops.dsn[id]
+			showDsn := getShowDsn(dsn)
+			log.
+				WithField("id", id).
+				Info("tenant open db...")
+			db, err := gorm.Open(m.Open(dsn), ops.config)
+			if err != nil {
+				log.
+					WithField("id", id).
+					WithField("dsn", showDsn).
+					Info("tenant open db failed")
+				return nil, err
+			}
+			tenantDBs[id] = db
+			log.
+				WithField("id", id).
+				WithField("dsn", showDsn).
+				Info("tenant open db success")
+		}
+	}
 	return &Tenant{
 		ops:       *ops,
 		tenantIds: tenantIds,
-		tenantDBs: make(map[string]*gorm.DB),
+		tenantDBs: tenantDBs,
 	}, nil
 }
 
