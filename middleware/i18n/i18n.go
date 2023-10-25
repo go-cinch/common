@@ -2,11 +2,14 @@ package i18n
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-cinch/common/i18n"
+	"github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/middleware"
 	"github.com/go-kratos/kratos/v2/transport"
 	"golang.org/x/text/language"
 	"google.golang.org/grpc/metadata"
+	"strings"
 )
 
 var i = i18n.New()
@@ -44,4 +47,23 @@ func FromContext(ctx context.Context) (rp *i18n.I18n) {
 		rp = v
 	}
 	return
+}
+
+func NewError(ctx context.Context, text string, f func(string, ...interface{}) *errors.Error, args ...string) error {
+	text = FromContext(ctx).T(text)
+	if len(args) == 0 {
+		return f(text)
+	}
+	formats := make([]string, 0, len(args))
+	vs := make([]interface{}, 0, len(args))
+	for index := 0; index < len(args); index += 2 {
+		if index+1 < len(args) {
+			formats = append(formats, "%s: %s")
+			vs = append(vs, args[index], args[index+1])
+			continue
+		}
+		formats = append(formats, "%s")
+		vs = append(vs, args[index])
+	}
+	return f(fmt.Sprintf("%s %s", text, fmt.Sprintf(strings.Join(formats, ", "), vs...)))
 }
