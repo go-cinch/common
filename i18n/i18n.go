@@ -72,7 +72,7 @@ func (i I18n) T(id string) (rp string) {
 			ID: id,
 		},
 	})
-	if err != nil {
+	if err != nil || rp == "" {
 		// use id as default message when unable to translate
 		rp = id
 	}
