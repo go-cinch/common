@@ -202,6 +202,11 @@ func (wk Worker) Once(options ...func(*RunOptions)) (err error) {
 		err = errors.WithStack(ErrUuidNil)
 		return
 	}
+	err = wk.lock.MustLock()
+	if err != nil {
+		return
+	}
+	defer wk.lock.Unlock()
 	t := asynq.NewTask(strings.Join([]string{ops.group, "once"}, "."), []byte(ops.payload), asynq.TaskID(ops.uid))
 	taskOpts := []asynq.Option{
 		asynq.Queue(wk.ops.group),
@@ -254,6 +259,11 @@ func (wk Worker) Cron(options ...func(*RunOptions)) (err error) {
 		err = errors.WithStack(ErrExprInvalid)
 		return
 	}
+	err = wk.lock.MustLock()
+	if err != nil {
+		return
+	}
+	defer wk.lock.Unlock()
 	t := periodTask{
 		Expr:     ops.expr,
 		Group:    strings.Join([]string{ops.group, "cron"}, "."),
@@ -264,15 +274,8 @@ func (wk Worker) Cron(options ...func(*RunOptions)) (err error) {
 		Timeout:  ops.timeout,
 	}
 	ctx := wk.getDefaultTimeoutCtx()
-	res, err := wk.redis.HGet(ctx, wk.ops.redisPeriodKey, ops.uid).Result()
-	if err == nil {
-		var oldT periodTask
-		json.Unmarshal([]byte(res), &oldT)
-		if oldT.Expr != t.Expr {
-			// remove old task
-			wk.Remove(ctx, t.Uid)
-		}
-	}
+	// remove old task
+	wk.Remove(ctx, t.Uid)
 	_, err = wk.redis.HSet(ctx, wk.ops.redisPeriodKey, ops.uid, t.String()).Result()
 	if err != nil {
 		err = errors.WithStack(ErrSaveCron)
@@ -282,13 +285,7 @@ func (wk Worker) Cron(options ...func(*RunOptions)) (err error) {
 }
 
 func (wk Worker) Remove(ctx context.Context, uid string) (err error) {
-	err = wk.lock.MustLock(ctx)
-	if err != nil {
-		return
-	}
-	defer wk.lock.Unlock(ctx)
 	wk.redis.HDel(ctx, wk.ops.redisPeriodKey, uid)
-
 	err = wk.inspector.DeleteTask(wk.ops.group, uid)
 	return
 }
@@ -300,7 +297,7 @@ func (wk Worker) processed(ctx context.Context, uid string) {
 	}
 	defer wk.lock.Unlock(ctx)
 	t, e := wk.redis.HGet(ctx, wk.ops.redisPeriodKey, uid).Result()
-	if e == nil || e != redis.Nil {
+	if e == nil || !errors.Is(e, redis.Nil) {
 		var item periodTask
 		item.FromString(t)
 		item.Processed++
