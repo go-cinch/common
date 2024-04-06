@@ -1,6 +1,7 @@
 package env
 
 import (
+	"github.com/go-cinch/common/copierx"
 	"strconv"
 	"strings"
 	"syscall"
@@ -43,6 +44,47 @@ func envResolver(ops Options, sub map[string]interface{}) error {
 				return err
 			}
 		case []interface{}:
+			if len(vt) == 0 {
+				continue
+			}
+			// arr item is map need check env by index
+			switch v0 := vt[0].(type) {
+			case map[string]interface{}:
+				arrKeys := getKeys(v0)
+				// check env from 0 to end
+				// end: cannot find any val from env by current index
+				index := 0
+				for {
+					var found2 bool
+					for _, arrKey := range arrKeys {
+						idxKey := strings.Join([]string{key, strconv.Itoa(index), strings.ToUpper(arrKey)}, ops.separator)
+						switch v0[arrKey].(type) {
+						case string:
+							_, found2 = syscall.Getenv(idxKey)
+						case bool:
+							_, found2 = getBoolEnv(idxKey)
+						case int:
+							_, found2 = getIntEnv(idxKey)
+						case float64:
+							_, found2 = getFloat64Env(idxKey)
+						}
+						if found2 {
+							break
+						}
+					}
+					if !found2 {
+						break
+					}
+					if index > 0 {
+						// increase vt cap
+						// new a copy
+						m:= make(map[string]interface{}, len(v0))
+						copierx.Copy(&m, v0)
+						vt = append(vt, m)
+					}
+					index++
+				}
+			}
 			for i, item := range vt {
 				idxKey := strings.Join([]string{key, strconv.Itoa(i)}, ops.separator)
 				var found2 bool
@@ -124,4 +166,14 @@ func getFloat64Env(key string) (v float64, ok bool) {
 		return
 	}
 	return
+}
+
+func getKeys(m map[string]interface{}) []string {
+	j := 0
+	keys := make([]string, len(m), len(m))
+	for k := range m {
+		keys[j] = k
+		j++
+	}
+	return keys
 }

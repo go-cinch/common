@@ -17,6 +17,7 @@ type Options struct {
 	maxIdle     int
 	maxOpen     int
 	maxLifetime time.Duration
+	skipMigrate bool
 }
 
 func WithDSN(tenant, dsn string) func(*Options) {
@@ -69,6 +70,12 @@ func WithMaxOpen(count int) func(*Options) {
 func WithMaxLifetime(d time.Duration) func(*Options) {
 	return func(options *Options) {
 		getOptionsOrSetDefault(options).maxLifetime = d
+	}
+}
+
+func WithSkipMigrate(flag bool) func(*Options) {
+	return func(options *Options) {
+		getOptionsOrSetDefault(options).skipMigrate = flag
 	}
 }
 
