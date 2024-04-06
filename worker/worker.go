@@ -368,7 +368,7 @@ func (wk Worker) clearArchived() {
 		if strings.HasSuffix(item.Type, ".cron") {
 			// cron task
 			t, e := wk.redis.HGet(ctx, wk.ops.redisPeriodKey, uid).Result()
-			if e == nil || e != redis.Nil {
+			if e == nil || !errors.Is(e, redis.Nil) {
 				var task periodTask
 				task.FromString(t)
 				next, _ := getNext(task.Expr, task.Next)

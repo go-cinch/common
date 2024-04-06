@@ -47,7 +47,7 @@ func newKratosLog(ops *Options) *kratosLog {
 	// use filter log
 	ops.logger = log.With(
 		log.NewFilter(
-			log.DefaultLogger,
+			ops.logger,
 			log.FilterLevel(loggerToKratosLogLevel(ops.level)),
 		),
 	)
