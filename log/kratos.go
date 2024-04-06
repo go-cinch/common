@@ -44,12 +44,22 @@ func Caller(ops Options) log.Valuer {
 }
 
 func newKratosLog(ops *Options) *kratosLog {
+	// use filter log
+	ops.logger = log.With(
+		log.NewFilter(
+			log.DefaultLogger,
+			log.FilterLevel(loggerToKratosLogLevel(ops.level)),
+		),
+	)
 	if ops.caller {
 		ops.logger = log.With(
 			ops.logger,
-			CallerKey, Caller(*ops),
+			CallerKey,
+			Caller(*ops),
 		)
 	}
+	// override default kratos log
+	log.SetLogger(ops.logger)
 	helper := log.NewHelper(ops.logger)
 	l := kratosLog{
 		log:    helper,
