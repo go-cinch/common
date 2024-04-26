@@ -8,7 +8,7 @@ replace (
 )
 
 require (
-	github.com/go-cinch/common/log v1.0.4
+	github.com/go-cinch/common/log v1.1.0
 	github.com/go-cinch/common/nx v1.0.4
 	github.com/golang-module/carbon/v2 v2.2.8
 	github.com/google/uuid v1.3.1
@@ -24,6 +24,7 @@ require (
 	github.com/go-kratos/kratos/v2 v2.7.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
+	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/cast v1.5.1 // indirect
 	golang.org/x/sys v0.10.0 // indirect
 	golang.org/x/time v0.3.0 // indirect

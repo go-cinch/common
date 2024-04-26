@@ -5,7 +5,7 @@ go 1.20
 replace github.com/go-cinch/common/log => ../log
 
 require (
-	github.com/go-cinch/common/log v1.0.4
+	github.com/go-cinch/common/log v1.1.0
 	gorm.io/gorm v1.25.2
 )
 
