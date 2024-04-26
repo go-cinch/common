@@ -25,8 +25,9 @@ var (
 func init() {
 	// get runtime root
 	_, file, _, _ := runtime.Caller(0)
-	logDir = regexp.MustCompile(`kratos\.go`).ReplaceAllString(file, "")
-	commonDir = regexp.MustCompile(`log.kratos\.go`).ReplaceAllString(file, "")
+	file = regexp.MustCompile(`@v\d+(\.\d+)+(-\d+\.\d+-[a-f0-9]+)?|@`).ReplaceAllString(file, "")
+	logDir = regexp.MustCompile(`caller/caller\.go`).ReplaceAllString(file, "")
+	commonDir = regexp.MustCompile(`log/caller/caller\.go`).ReplaceAllString(file, "")
 }
 
 func Caller(options ...func(*Options)) log.Valuer {
