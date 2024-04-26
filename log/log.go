@@ -1,8 +1,6 @@
 package log
 
-import (
-	"context"
-)
+import "context"
 
 // Fields type, used to pass to `WithFields`.
 type Fields map[string]interface{}
@@ -25,7 +23,10 @@ func New(options ...func(*Options)) (l Logger) {
 	for _, f := range options {
 		f(ops)
 	}
-	l = newKratosLog(ops)
+	// l = newKratosLog(ops)
+	// if ops.json {
+	l = newLogrusLog(ops)
+	// }
 	return l
 }
 
