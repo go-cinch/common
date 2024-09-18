@@ -35,5 +35,6 @@ require (
 	go.opentelemetry.io/otel/trace v1.30.0 // indirect
 	golang.org/x/sys v0.10.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	google.golang.org/protobuf v1.31.0 // indirect
+	google.golang.org/grpc v1.56.3 // indirect
+	google.golang.org/protobuf v1.34.1 // indirect
 )
