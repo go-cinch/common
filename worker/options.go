@@ -2,24 +2,29 @@ package worker
 
 import (
 	"context"
-	"github.com/hibiken/asynq"
 	"reflect"
 	"time"
+
+	"github.com/go-cinch/common/log"
+	"github.com/hibiken/asynq"
 )
 
 type Options struct {
-	group             string
-	redisUri          string
-	redisPeriodKey    string
-	retention         int
-	maxRetry          int
-	retryDelayFunc    func(n int, e error, t *asynq.Task) time.Duration
-	handler           func(ctx context.Context, p Payload) error
-	handlerNeedWorker func(worker Worker, ctx context.Context, p Payload) error
-	callback          string
-	clearArchived     int
-	maxArchivedTime   int
-	timeout           int
+	group                    string
+	redisURI                 string
+	redisPeriodKey           string
+	retention                int
+	maxRetry                 int
+	retryDelayFunc           func(n int, e error, t *asynq.Task) time.Duration
+	handler                  func(ctx context.Context, p Payload) error
+	handlerNeedWorker        func(ctx context.Context, worker Worker, p Payload) error
+	callback                 string
+	clearArchived            int
+	maxArchivedTime          int
+	timeout                  int
+	delayedTaskCheckInterval time.Duration
+	scanTaskInterval         time.Duration
+	logLevel                 log.Level
 }
 
 func WithGroup(s string) func(*Options) {
@@ -28,9 +33,9 @@ func WithGroup(s string) func(*Options) {
 	}
 }
 
-func WithRedisUri(s string) func(*Options) {
+func WithRedisURI(s string) func(*Options) {
 	return func(options *Options) {
-		getOptionsOrSetDefault(options).redisUri = s
+		getOptionsOrSetDefault(options).redisURI = s
 	}
 }
 
@@ -68,7 +73,7 @@ func WithHandler(fun func(ctx context.Context, p Payload) error) func(*Options) 
 	}
 }
 
-func WithHandlerNeedWorker(fun func(worker Worker, ctx context.Context, p Payload) error) func(*Options) {
+func WithHandlerNeedWorker(fun func(ctx context.Context, worker Worker, p Payload) error) func(*Options) {
 	return func(options *Options) {
 		if fun != nil {
 			getOptionsOrSetDefault(options).handlerNeedWorker = fun
@@ -106,16 +111,44 @@ func WithTimeout(second int) func(*Options) {
 	}
 }
 
+func WithDelayedTaskCheckInterval(duration time.Duration) func(*Options) {
+	return func(options *Options) {
+		if duration > 0 {
+			getOptionsOrSetDefault(options).delayedTaskCheckInterval = duration
+		}
+	}
+}
+
+func WithScanTaskInterval(duration time.Duration) func(*Options) {
+	return func(options *Options) {
+		if duration > 0 {
+			getOptionsOrSetDefault(options).scanTaskInterval = duration
+		}
+	}
+}
+
+func WithLogLevel(level log.Level) func(*Options) {
+	return func(options *Options) {
+		getOptionsOrSetDefault(options).logLevel = level
+	}
+}
+
 func getOptionsOrSetDefault(options *Options) *Options {
 	if options == nil {
 		return &Options{
 			group:          "task",
-			redisUri:       "redis://127.0.0.1:6379/0",
+			redisURI:       "redis://127.0.0.1:6379/0",
 			redisPeriodKey: "period",
 			retention:      60,
 			maxRetry:       3,
 			clearArchived:  300,
 			timeout:        10,
+			// if u need run seconds expr, must set this param < one period
+			// for example, expr is */2 * * * * * *, delayedTaskCheckInterval < 2 * time.Second can work well
+			delayedTaskCheckInterval: 5 * time.Second,
+			// if u need run seconds expr, must set this param < one period
+			scanTaskInterval: time.Second,
+			logLevel:         log.InfoLevel,
 		}
 	}
 	return options
@@ -125,7 +158,7 @@ type RunOptions struct {
 	uid             string
 	group           string
 	payload         string
-	expr            string          // only period task
+	expr            string          // only period task, seconds expr: */30 * * * * * *, minutes expr: 0 */5 * * * * *
 	in              *time.Duration  // only once task
 	at              *time.Time      // only once task
 	now             bool            // only once task
@@ -137,7 +170,7 @@ type RunOptions struct {
 	timeout         int
 }
 
-func WithRunUuid(s string) func(*RunOptions) {
+func WithRunUUID(s string) func(*RunOptions) {
 	return func(options *RunOptions) {
 		getRunOptionsOrSetDefault(options).uid = s
 	}
