@@ -3,18 +3,20 @@ package minio
 import (
 	"context"
 	"errors"
-	"github.com/golang-module/carbon/v2"
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/golang-module/carbon/v2"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 type Token struct {
-	Uri  string            `json:"uri,omitempty"`
+	URI  string            `json:"uri,omitempty"`
 	Data map[string]string `json:"data,omitempty"`
 }
 
@@ -105,7 +107,7 @@ func (m *Minio) Token(ctx context.Context, object string) (token Token, err erro
 	policy := minio.NewPostPolicy()
 	_ = policy.SetBucket(m.ops.bucket)
 	_ = policy.SetKey(object)
-	_ = policy.SetExpires(carbon.Now(carbon.UTC).AddDuration(m.ops.expire).Carbon2Time())
+	_ = policy.SetExpires(carbon.Now(carbon.UTC).AddDuration(m.ops.expire).StdTime())
 	if m.ops.contentType != "" {
 		err = policy.SetContentType(m.ops.contentType)
 		if err != nil {
@@ -127,7 +129,7 @@ func (m *Minio) Token(ctx context.Context, object string) (token Token, err erro
 		err = errors.New(strings.Join([]string{ErrTokenSignFailed.Error(), err.Error()}, " "))
 		return
 	}
-	token.Uri = uri.String()
+	token.URI = uri.String()
 	token.Data = formData
 	return
 }
@@ -191,4 +193,31 @@ func (m *Minio) FPutObject(ctx context.Context, object, path string) (*minio.Upl
 		return nil, err
 	}
 	return &info, nil
+}
+
+func (m *Minio) PreSignedGetObject(ctx context.Context, object string) (string, error) {
+	duration, _ := time.ParseDuration(m.ops.expire)
+	res, err := m.client.PresignedGetObject(ctx, m.ops.bucket, object, duration, make(url.Values))
+	if err != nil {
+		return "", err
+	}
+	return res.String(), nil
+}
+
+func (m *Minio) PreSignedPutObject(ctx context.Context, object string) (string, error) {
+	duration, _ := time.ParseDuration(m.ops.expire)
+	res, err := m.client.PresignedPutObject(ctx, m.ops.bucket, object, duration)
+	if err != nil {
+		return "", err
+	}
+	return res.String(), nil
+}
+
+func (m *Minio) PreSignedHeadObject(ctx context.Context, object string) (string, error) {
+	duration, _ := time.ParseDuration(m.ops.expire)
+	res, err := m.client.PresignedHeadObject(ctx, m.ops.bucket, object, duration, make(url.Values))
+	if err != nil {
+		return "", err
+	}
+	return res.String(), nil
 }
