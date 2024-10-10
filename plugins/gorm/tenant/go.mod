@@ -10,7 +10,7 @@ replace (
 )
 
 require (
-	github.com/go-cinch/common/log v1.1.0
+	github.com/go-cinch/common/log v1.1.1
 	github.com/go-cinch/common/migrate v1.0.4
 	github.com/go-cinch/common/plugins/gorm/log v1.0.4
 	github.com/go-cinch/common/utils v1.0.4

@@ -5,7 +5,7 @@ go 1.20
 replace github.com/go-cinch/common/log => ../log
 
 require (
-	github.com/go-cinch/common/log v1.1.0
+	github.com/go-cinch/common/log v1.1.1
 	github.com/google/uuid v1.3.1
 	github.com/redis/go-redis/v9 v9.2.1
 )

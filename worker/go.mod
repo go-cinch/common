@@ -10,7 +10,7 @@ replace (
 )
 
 require (
-	github.com/go-cinch/common/log v1.1.0
+	github.com/go-cinch/common/log v1.1.1
 	github.com/go-cinch/common/nx v1.0.4
 	github.com/golang-module/carbon/v2 v2.3.12
 	github.com/google/uuid v1.3.1
