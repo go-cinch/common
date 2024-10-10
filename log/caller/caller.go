@@ -18,7 +18,6 @@ var (
 	notSkipDirs = []string{
 		"transport/grpc/server",
 		"transport/http/server",
-		"middleware/logging/logging",
 	}
 )
 
@@ -44,14 +43,19 @@ func caller(ops Options) string {
 	// the second caller usually from gorm internal, so set i start from 2
 	for i := 0; i < 15; i++ {
 		_, file, line, ok := runtime.Caller(i)
-		if strings.Contains(file, commonDir) {
-			continue
-		}
 		var skip bool
+		if strings.Contains(file, commonDir) {
+			skip = true
+		}
 		for _, item := range ops.skips {
 			if strings.Contains(file, item) {
 				skip = true
 				break
+			}
+		}
+		for _, item := range ops.keeps {
+			if strings.Contains(file, item) {
+				skip = false
 			}
 		}
 		if strings.Contains(file, "go-kratos") && containsString(notSkipDirs, file) {

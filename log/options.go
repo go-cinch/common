@@ -92,10 +92,12 @@ func getOptionsOrSetDefault(options *Options) *Options {
 				DisableQuote:     true,
 				DisableSorting:   false,
 				QuoteEmptyFields: false,
+				TimestampFormat:  "2006-01-02T15:04:05.999Z07:00",
 			},
 			json: false,
 			jsonFormatter: &logrus.JSONFormatter{
-				PrettyPrint: false,
+				PrettyPrint:     false,
+				TimestampFormat: "2006-01-02T15:04:05.999Z07:00",
 			},
 			skipEmpty: true,
 			valuers:   make(Fields),

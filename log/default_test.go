@@ -26,10 +26,12 @@ func TestDefault(*testing.T) {
 	Info("test info")
 
 	WithField("field1", 1).Info("test info with 1 field")
+	WithField("field1", 1).WithField("field2", 2).Info("test info with 1 and 2 field")
+	WithField("field1", 1).WithField("field2", 2).WithFields(Fields{"field1": 1, "field2": 2}).Info("test info with 1 and 2 field")
 	WithField("field1", 1).Info("test info with 1 field and format %s", "yes")
 
-	WithFields(Fields{"field1": 1, "filed2": 2}).Info("test info with 2 field")
-	WithFields(Fields{"field1": 1, "filed2": 2}).Info("test info with 2 field and format %d", 1)
+	WithFields(Fields{"field1": 1, "field2": 2}).Info("test info with 2 field")
+	WithFields(Fields{"field1": 1, "field2": 2}).Info("test info with 2 field and format %d", 1)
 
 	WithError(fmt.Errorf("something error")).Warn("test warn with err")
 	WithError(nil).Warn("test warn without err")
@@ -61,8 +63,8 @@ func TestDefault(*testing.T) {
 	WithField("field1", 1).Info("test info with 1 field")
 	WithField("field1", 1).Info("test info with 1 field and format %s", "yes")
 
-	WithFields(Fields{"field1": 1, "filed2": 2}).Info("test info with 2 field")
-	WithFields(Fields{"field1": 1, "filed2": 2}).Info("test info with 2 field and format %d", 1)
+	WithFields(Fields{"field1": 1, "field2": 2}).Info("test info with 2 field")
+	WithFields(Fields{"field1": 1, "field2": 2}).Info("test info with 2 field and format %d", 1)
 
 	WithContext(context.WithValue(context.Background(), "ctx", "ctx1")).Info("test info with ctx")
 	WithContext(context.WithValue(context.Background(), "ctx", "ctx2")).Info("test info with ctx and format %v", fmt.Errorf("error"))

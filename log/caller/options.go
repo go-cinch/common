@@ -2,6 +2,7 @@ package caller
 
 type Options struct {
 	skips   []string
+	keeps   []string
 	source  bool
 	prefix  string
 	level   int
@@ -12,6 +13,13 @@ type Options struct {
 func WithSkip(s string) func(*Options) {
 	return func(options *Options) {
 		getOptionsOrSetDefault(options).skips = append(getOptionsOrSetDefault(options).skips, s)
+	}
+}
+
+// WithKeep if line contains s, keep it
+func WithKeep(s string) func(*Options) {
+	return func(options *Options) {
+		getOptionsOrSetDefault(options).keeps = append(getOptionsOrSetDefault(options).keeps, s)
 	}
 }
 
@@ -39,7 +47,16 @@ func WithVersion(flag bool) func(*Options) {
 func getOptionsOrSetDefault(options *Options) *Options {
 	if options == nil {
 		return &Options{
-			skips:   []string{"gorm.io", "go-kratos", "golang.org/x/sync", "go-cinch/common"},
+			skips: []string{
+				"gorm.io",
+				"go-kratos",
+				"golang.org/x/sync",
+				"go-cinch/common",
+				".gen.go",
+			},
+			keeps: []string{
+				"go-cinch/common/middleware/logging",
+			},
 			source:  false,
 			level:   2,
 			version: true,

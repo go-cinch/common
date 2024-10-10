@@ -17,7 +17,18 @@ type kratosLog struct {
 }
 
 func (l kratosLog) Log(level log.Level, keyvals ...interface{}) (err error) {
-	l.log.Log(kratosLevelToLogLevel(level), keyvals...)
+	ns := make(Fields)
+	var msg string
+	for i := 0; i < len(keyvals); i += 2 {
+		if keyvals[i] == "" {
+			msg = fmt.Sprintf("%v", keyvals[i+1])
+			continue
+		}
+		ns[fmt.Sprintf("%v", keyvals[i])] = keyvals[i+1]
+	}
+	l.log.
+		WithFields(ns).
+		Log(kratosLevelToLogLevel(level), msg)
 	return
 }
 
@@ -89,24 +100,30 @@ func (l *logrusLog) WithContext(ctx context.Context) Logger {
 }
 
 func (l *logrusLog) Log(level Level, args ...interface{}) {
-	ll := *l
-	ll.bindValues()
-	if len(l.fields) > 0 {
-		ll.log = ll.log.WithFields(logrus.Fields(l.fields))
+	ns := l.bindValues()
+	// use new entry avoid race
+	ll := logrus.
+		NewEntry(l.log.Logger).
+		WithContext(l.log.Context)
+	if len(ns) > 0 {
+		ll = ll.WithFields(logrus.Fields(ns))
 	}
-	ll.log.Log(loggerToLogrusLogLevel(level), fmt.Sprint(args...))
+	ll.Log(loggerToLogrusLogLevel(level), fmt.Sprint(args...))
 }
 
 func (l *logrusLog) Logf(level Level, format string, args ...interface{}) {
-	ll := *l
-	ll.bindValues()
-	if len(l.fields) > 0 {
-		ll.log = ll.log.WithFields(logrus.Fields(l.fields))
+	ns := l.bindValues()
+	ll := logrus.
+		NewEntry(l.log.Logger).
+		WithContext(l.log.Context)
+	if len(ns) > 0 {
+		ll = ll.WithFields(logrus.Fields(ns))
 	}
-	ll.log.Log(loggerToLogrusLogLevel(level), fmt.Sprintf(format, args...))
+	ll.Log(loggerToLogrusLogLevel(level), fmt.Sprintf(format, args...))
 }
 
-func (l *logrusLog) bindValues() {
+func (l *logrusLog) bindValues() Fields {
+	ns1 := copyFields(l.fields)
 	for k, v := range l.valuers {
 		var val interface{}
 		switch v.(type) {
@@ -115,11 +132,16 @@ func (l *logrusLog) bindValues() {
 		default:
 			val = v
 		}
-		if str, ok := val.(string); ok && l.ops.skipEmpty && str == "" {
+		ns1[k] = val
+	}
+	ns2 := make(Fields)
+	for k, v := range ns1 {
+		if str, ok := v.(string); ok && l.ops.skipEmpty && str == "" {
 			continue
 		}
-		l.fields[k] = val
+		ns2[k] = v
 	}
+	return ns2
 }
 
 func loggerToLogrusLogLevel(level Level) logrus.Level {
