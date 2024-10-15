@@ -2,39 +2,41 @@ package jwt
 
 import (
 	"context"
+	"strings"
+
 	"github.com/go-kratos/kratos/v2/metadata"
 	"github.com/go-kratos/kratos/v2/transport"
 	jwtV4 "github.com/golang-jwt/jwt/v4"
 	"github.com/golang-module/carbon/v2"
-	gmd "google.golang.org/grpc/metadata"
-	"strings"
 )
 
 const (
-	ClaimCode     = "code"
-	ClaimPlatform = "platform"
-	ClaimExpires  = "exp"
+	ClaimExpire = "exp"
 )
 
 type User struct {
-	Token    string `json:"token"`
-	Code     string `json:"code"`
-	Platform string `json:"platform"`
+	Token string            `json:"token"`
+	Attrs map[string]string `json:"attrs"`
 }
 
 type user struct{}
 
-func NewServerContext(ctx context.Context, claims jwtV4.Claims) context.Context {
-	if mClaims, ok := claims.(jwtV4.MapClaims); ok {
-		u := new(User)
-		if v, ok2 := mClaims[ClaimCode].(string); ok2 {
-			u.Code = v
-		}
-		if v, ok3 := mClaims[ClaimPlatform].(string); ok3 {
-			u.Platform = v
-		}
-		ctx = NewServerContextByUser(ctx, *u)
+func NewServerContext(ctx context.Context, claims jwtV4.Claims, keys ...string) context.Context {
+	mClaims, ok := claims.(jwtV4.MapClaims)
+	if !ok {
+		return ctx
 	}
+	u := &User{
+		Attrs: make(map[string]string),
+	}
+	for _, key := range keys {
+		v, ok2 := mClaims[key].(string)
+		if !ok2 {
+			continue
+		}
+		u.Attrs[key] = v
+	}
+	ctx = NewServerContextByUser(ctx, *u)
 	return ctx
 }
 
@@ -43,29 +45,22 @@ func NewServerContextByUser(ctx context.Context, u User) context.Context {
 	return ctx
 }
 
-func NewServerContextByReplyMD(ctx context.Context, md gmd.MD) context.Context {
-	u := new(User)
-	v1 := md.Get("x-md-global-code")
-	if len(v1) == 1 {
-		u.Code = v1[0]
-	}
-	v2 := md.Get("x-md-global-platform")
-	if len(v2) == 1 {
-		u.Platform = v2[0]
-	}
-	return NewServerContextByUser(ctx, *u)
-}
-
 func FromServerContext(ctx context.Context) (u *User) {
-	u = new(User)
+	u = &User{
+		Attrs: make(map[string]string),
+	}
 	if v, ok := ctx.Value(user{}).(*User); ok {
-		u.Code = v.Code
-		u.Platform = v.Platform
 		u.Token = v.Token
+		// copy attr
+		for k2, v2 := range v.Attrs {
+			u.Attrs[k2] = v2
+		}
 	} else if md, ok2 := metadata.FromServerContext(ctx); ok2 {
-		u.Code = md.Get("x-md-global-code")
-		u.Platform = md.Get("x-md-global-platform")
-		u.Token = TokenFromServerContext(ctx)
+		for k2, v2 := range md {
+			if strings.HasPrefix(k2, "x-md-global-") {
+				u.Attrs[strings.TrimPrefix(k2, "x-md-global-")] = v2[0]
+			}
+		}
 	}
 	if u.Token == "" {
 		u.Token = TokenFromServerContext(ctx)
@@ -88,22 +83,6 @@ func TokenFromServerContext(ctx context.Context) (token string) {
 	return
 }
 
-func AppendToClientContext(ctx context.Context, us ...User) context.Context {
-	var u *User
-	if len(us) > 0 {
-		u = &us[0]
-	} else {
-		u = FromServerContext(ctx)
-	}
-	ctx = metadata.AppendToClientContext(
-		ctx,
-		"x-md-global-code", u.Code,
-		"x-md-global-platform", u.Platform,
-		"x-md-global-jwt", u.Token,
-	)
-	return ctx
-}
-
 func AppendToReplyHeader(ctx context.Context, us ...User) {
 	var u *User
 	if len(us) > 0 {
@@ -111,22 +90,24 @@ func AppendToReplyHeader(ctx context.Context, us ...User) {
 	} else {
 		u = FromServerContext(ctx)
 	}
-	if tr, ok := transport.FromServerContext(ctx); ok {
-		tr.ReplyHeader().Set("x-md-global-code", u.Code)
-		tr.ReplyHeader().Set("x-md-global-platform", u.Platform)
+	tr, _ := transport.FromServerContext(ctx)
+	for k, v := range u.Attrs {
+		tr.ReplyHeader().Set("x-md-global-"+k, v)
 	}
 	return
 }
 
-func (u *User) CreateToken(key, duration string) (token string, expires carbon.Carbon) {
-	expires = carbon.Now().AddDuration(duration)
+func (u *User) CreateToken(key, duration string) (token string, expire carbon.Carbon) {
+	expire = carbon.Now().AddDuration(duration)
+	mClaims := jwtV4.MapClaims{
+		ClaimExpire: expire.Timestamp(),
+	}
+	for k, v := range u.Attrs {
+		mClaims[k] = v
+	}
 	claims := jwtV4.NewWithClaims(
 		jwtV4.SigningMethodHS512,
-		jwtV4.MapClaims{
-			ClaimCode:     u.Code,
-			ClaimPlatform: u.Platform,
-			ClaimExpires:  expires.Timestamp(),
-		},
+		mClaims,
 	)
 	token, _ = claims.SignedString([]byte(key))
 	return

@@ -11,7 +11,6 @@ go get -u github.com/go-cinch/common/jwt
 
 - `NewServerContext` - new server context with jwt.Claims
 - `NewServerContextByUser` - new server context with User
-- `NewServerContextByReplyMD` - new server context with `x-md-global-code` and `x-md-global-platform`
 - `FromServerContext` - get user from server context
 - `TokenFromServerContext` - get jwt token from server context
 - `AppendToClientContext` - append user to grpc client
