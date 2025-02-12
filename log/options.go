@@ -1,17 +1,22 @@
 package log
 
-import "github.com/go-kratos/kratos/v2/log"
+import (
+	"github.com/go-cinch/common/log/caller"
+	"github.com/go-kratos/kratos/v2/log"
+	"github.com/sirupsen/logrus"
+)
 
 type Options struct {
-	level            Level
-	logger           log.Logger
-	loggerMessageKey string
-	caller           bool
-	callerSkip       []string
-	callerSource     bool
-	callerPrefix     string
-	callerLevel      int
-	callerVersion    bool
+	level         Level
+	logger        log.Logger
+	caller        bool
+	callOptions   []func(*caller.Options)
+	text          bool
+	textFormatter *logrus.TextFormatter
+	json          bool
+	jsonFormatter *logrus.JSONFormatter
+	skipEmpty     bool
+	valuers       Fields
 }
 
 func (o Options) Level() Level {
@@ -22,35 +27,80 @@ func (o Options) Logger() log.Logger {
 	return o.logger
 }
 
+// WithLevel change log level, default info
 func WithLevel(level Level) func(*Options) {
 	return func(options *Options) {
 		getOptionsOrSetDefault(options).level = level
 	}
 }
 
-func WithLogger(logger log.Logger) func(*Options) {
+// WithCaller enable caller
+func WithCaller(flag bool) func(*Options) {
 	return func(options *Options) {
-		getOptionsOrSetDefault(options).logger = logger
+		getOptionsOrSetDefault(options).caller = flag
 	}
 }
 
-func WithLoggerMessageKey(key string) func(*Options) {
+// WithCallerOptions add call options
+func WithCallerOptions(ops ...func(*caller.Options)) func(*Options) {
 	return func(options *Options) {
-		getOptionsOrSetDefault(options).loggerMessageKey = key
+		getOptionsOrSetDefault(options).callOptions = append(getOptionsOrSetDefault(options).callOptions, ops...)
+	}
+}
+
+// WithValuer print k for each line
+func WithValuer(k string, v interface{}) func(*Options) {
+	return func(options *Options) {
+		getOptionsOrSetDefault(options).valuers[k] = v
+	}
+}
+
+// WithText enable text format
+func WithText(flag bool) func(*Options) {
+	return func(options *Options) {
+		ops := getOptionsOrSetDefault(options)
+		ops.text = flag
+		ops.json = !flag
+	}
+}
+
+// WithJSON enable JSON format
+func WithJSON(flag bool) func(*Options) {
+	return func(options *Options) {
+		ops := getOptionsOrSetDefault(options)
+		ops.json = flag
+		ops.text = !flag
+	}
+}
+
+// WithSkipEmpty when key is empty string, not print key
+func WithSkipEmpty(flag bool) func(*Options) {
+	return func(options *Options) {
+		getOptionsOrSetDefault(options).skipEmpty = flag
 	}
 }
 
 func getOptionsOrSetDefault(options *Options) *Options {
 	if options == nil {
 		return &Options{
-			level:            DebugLevel,
-			logger:           log.DefaultLogger,
-			loggerMessageKey: log.DefaultMessageKey,
-			caller:           true,
-			callerSkip:       []string{"gorm.io", "go-kratos", "golang.org/x/sync", "go-cinch/common"},
-			callerSource:     false,
-			callerLevel:      2,
-			callerVersion:    true,
+			level:  InfoLevel,
+			caller: true,
+			text:   true,
+			textFormatter: &logrus.TextFormatter{
+				FullTimestamp:    true,
+				DisableColors:    true,
+				DisableQuote:     true,
+				DisableSorting:   false,
+				QuoteEmptyFields: false,
+				TimestampFormat:  "2006-01-02T15:04:05.999Z07:00",
+			},
+			json: false,
+			jsonFormatter: &logrus.JSONFormatter{
+				PrettyPrint:     false,
+				TimestampFormat: "2006-01-02T15:04:05.999Z07:00",
+			},
+			skipEmpty: true,
+			valuers:   make(Fields),
 		}
 	}
 	return options

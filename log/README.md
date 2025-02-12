@@ -1,4 +1,4 @@
-# Log
+~~# Log
 
 simple log wrapper based on [kratos log](https://go-kratos.dev/en/docs/component/log).
 
@@ -15,18 +15,17 @@ simple log wrapper based on [kratos log](https://go-kratos.dev/en/docs/component
 ## Usage
 
 ```bash
-go get -u github.com/go-cinch/common/log
+go get github.com/go-cinch/common/log
 ```
 
 ```go
 import (
 	"context"
 	"fmt"
+	
 	"github.com/go-cinch/common/log"
-	kratos "github.com/go-kratos/kratos/contrib/log/logrus/v2"
-	kratosLog "github.com/go-kratos/kratos/v2/log"
-	"github.com/sirupsen/logrus"
-	"os"
+	"github.com/go-cinch/common/log/caller"
+	"github.com/go-kratos/kratos/v2/middleware/tracing"
 )
 
 func main() {
@@ -43,49 +42,26 @@ func main() {
 	log.WithContext(context.WithValue(context.Background(), "ctx", "ctx")).Info("test info with ctx and format %v", fmt.Errorf("error"))
 
 	// 2. override default wrapper
-	log.DefaultWrapper = log.NewWrapper(
-		log.WithLogger(
-			kratosLog.With(
-				kratosLog.NewStdLogger(os.Stdout),
-				"service.id", "123",
-				"service.name", "456",
-				"service.version", "789",
-			),
-		),
+	logOps := []func(*log.Options){
+		log.WithJSON(false),
 		log.WithLevel(log.WarnLevel),
-		log.WithLoggerMessageKey("m"),
-	)
-	// only print test warn
-	log.Info("test info")
-	log.Warn("test warn")
-
-	// 3. use logrus
-	// go get -u github.com/go-kratos/kratos/contrib/log/logrus/v2
-	// go get -u github.com/sirupsen/logrus
-	log.DefaultWrapper = log.NewWrapper(
-		log.WithLogger(
-			kratosLog.With(
-				kratos.NewLogger(logrus.New()),
-			),
+		log.WithValuer("custom.field", "ok"),
+		log.WithValuer("trace.id", tracing.TraceID()),
+		log.WithValuer("span.id", tracing.SpanID()),
+		log.WithSkipEmpty(false),
+		log.WithCallerOptions(
+			caller.WithSource(false),
+			caller.WithLevel(2),
+			caller.WithVersion(true),
 		),
-	)
-	log.Info("test info")
-
-	
-	// INFO caller=main.go:15 msg=test info
-	// INFO caller=main.go:17 msg=test info with 1 field field1=1
-	// INFO caller=main.go:18 msg=test info with 1 field and format yes field1=1
-	// INFO caller=main.go:20 msg=test info with 2 field field1=1 filed2=2
-	// INFO caller=main.go:21 msg=test info with 2 field and format 1 field1=1 filed2=2
-	// INFO caller=main.go:23 msg=test info with ctx
-	// INFO caller=main.go:24 msg=test info with ctx and format error
-	// WARN service.id=123 service.name=456 service.version=789 caller=main.go:41 m=test warn
-	// INFO[0000] test info                                     caller="main.go:57"
+	}
+	log.DefaultWrapper = log.NewWrapper(logOps...)
+	// only print test warn
+	log.Info("test info(not print)")
+	log.Warn("test warn")
 }
 ```
 
 ## Options
 
 - `WithLevel - log level, default debug
-- `WithLogger` - kratos logger, default kratosLog.DefaultLogger
-- `WithLoggerMessageKey` - msg key, default msg
