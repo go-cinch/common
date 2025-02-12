@@ -4,33 +4,43 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/bsm/redislock"
 	"github.com/go-cinch/common/log"
-	"github.com/go-cinch/common/nx"
+	"github.com/go-cinch/common/queue/stream"
 	"github.com/golang-module/carbon/v2"
 	"github.com/google/uuid"
 	"github.com/gorhill/cronexpr"
 	"github.com/hibiken/asynq"
+	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
 	"github.com/redis/go-redis/v9"
-	"net/http"
-	"strings"
-	"time"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Worker struct {
-	ops       Options
-	redis     redis.UniversalClient
-	redisOpt  asynq.RedisConnOpt
-	lock      *nx.Nx
-	client    *asynq.Client
-	inspector *asynq.Inspector
-	Error     error
+	ops           Options
+	redis         redis.UniversalClient
+	redisOpt      asynq.RedisConnOpt
+	locker        *redislock.Client
+	client        *asynq.Client
+	inspector     *asynq.Inspector
+	stream        *stream.Stream
+	streamLimiter *ratecounter.RateCounter
+	Error         error
 }
 
 type periodTask struct {
-	Expr            string `json:"expr"` // cron expr github.com/robfig/cron/v3
+	Expr            string `json:"expr"` // cron expr github.com/gorhill/cronexpr
 	Group           string `json:"group"`
-	Uid             string `json:"uid"`
+	UID             string `json:"uid"`
 	Payload         string `json:"payload"`
 	Next            int64  `json:"next"`      // next schedule unix timestamp
 	Processed       int64  `json:"processed"` // run times
@@ -39,7 +49,7 @@ type periodTask struct {
 	Timeout         int    `json:"timeout"`
 }
 
-func (p periodTask) String() (str string) {
+func (p *periodTask) String() (str string) {
 	bs, _ := json.Marshal(p)
 	str = string(bs)
 	return
@@ -56,8 +66,29 @@ type periodTaskHandler struct {
 
 type Payload struct {
 	Group   string `json:"group"`
-	Uid     string `json:"uid"`
+	UID     string `json:"uid"`
 	Payload string `json:"payload"`
+}
+
+type StreamPayload struct {
+	TraceID         string         `json:"traceID,omitempty"`
+	SpanID          string         `json:"spanID,omitempty"`
+	UID             string         `json:"uid,omitempty"`
+	Group           string         `json:"group,omitempty"`
+	Payload         string         `json:"payload,omitempty"`
+	Retention       int            `json:"retention,string,omitempty"`
+	Replace         string         `json:"replace,omitempty"`
+	MaxRetry        int            `json:"maxRetry,string,omitempty"`
+	MaxArchivedTime int            `json:"maxArchivedTime,string,omitempty"`
+	Timeout         int            `json:"timeout,string,omitempty"`
+	In              *time.Duration `json:"in,string,omitempty"`
+	Now             string         `json:"now,omitempty"`
+}
+
+type OncePayload struct {
+	TraceID string `json:"traceID,omitempty"`
+	SpanID  string `json:"spanID,omitempty"`
+	Payload string `json:"payload,omitempty"`
 }
 
 func (p Payload) String() (str string) {
@@ -68,40 +99,72 @@ func (p Payload) String() (str string) {
 
 func (p periodTaskHandler) ProcessTask(ctx context.Context, t *asynq.Task) (err error) {
 	uid := uuid.NewString()
-	group := strings.TrimSuffix(strings.TrimSuffix(t.Type(), ".once"), ".cron")
 	payload := Payload{
-		Group:   group,
-		Uid:     t.ResultWriter().TaskID(),
-		Payload: string(t.Payload()),
+		UID: t.ResultWriter().TaskID(),
+	}
+	var group string
+	if strings.HasSuffix(t.Type(), ".once") {
+		group = strings.TrimSuffix(t.Type(), ".once")
+		var oncePayload OncePayload
+		_ = json.Unmarshal(t.Payload(), &oncePayload)
+		traceFromHex, _ := trace.TraceIDFromHex(oncePayload.TraceID)
+		spanFromHex, _ := trace.SpanIDFromHex(oncePayload.SpanID)
+		sc := trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    traceFromHex,
+			SpanID:     spanFromHex,
+			TraceFlags: trace.FlagsSampled,
+		})
+		ctx = trace.ContextWithRemoteSpanContext(ctx, sc)
+		payload.Payload = oncePayload.Payload
+	} else {
+		group = strings.TrimSuffix(t.Type(), ".cron")
+		payload.Payload = string(t.Payload())
+	}
+	payload.Group = group
+	tr := otel.Tracer("worker")
+	ctx, span := tr.Start(ctx, "ProcessTask")
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+		}
+		span.End()
+	}()
+	span.SetAttributes(
+		attribute.String("uid", uid),
+		attribute.String("group", group),
+		attribute.String("payload", payload.Payload),
+	)
+	fields := log.Fields{
+		"task": payload,
+		"uuid": uid,
 	}
 	defer func() {
 		if err != nil {
 			log.
-				WithError(err).
-				WithFields(log.Fields{
-					"task": payload,
-					"uuid": uid,
-				}).
-				Error("run task failed")
+				WithContext(ctx).
+				WithFields(fields).
+				Warn("run task failed: %v", err)
+			return
 		}
+		log.
+			WithContext(ctx).
+			WithFields(fields).
+			Debug("run task success")
 	}()
 	if p.tk.ops.handler != nil {
 		err = p.tk.ops.handler(ctx, payload)
 	} else if p.tk.ops.handlerNeedWorker != nil {
-		err = p.tk.ops.handlerNeedWorker(p.tk, ctx, payload)
+		err = p.tk.ops.handlerNeedWorker(ctx, p.tk, payload)
 	} else if p.tk.ops.callback != "" {
 		err = p.httpCallback(ctx, payload)
 	} else {
 		log.
 			WithContext(ctx).
-			WithFields(log.Fields{
-				"task": payload,
-				"uuid": uid,
-			}).
+			WithFields(fields).
 			Info("no task handler")
 	}
 	// save processed count
-	p.tk.processed(ctx, payload.Uid)
+	p.tk.processed(ctx, payload.UID)
 	return
 }
 
@@ -118,7 +181,7 @@ func (p periodTaskHandler) httpCallback(ctx context.Context, payload Payload) (e
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		err = ErrHttpCallbackInvalidStatusCode
+		err = ErrHTTPCallbackInvalidStatusCode
 	}
 	return
 }
@@ -130,26 +193,22 @@ func New(options ...func(*Options)) (tk *Worker) {
 		f(ops)
 	}
 	tk = &Worker{}
-	if ops.redisUri == "" {
+	if ops.redisURI == "" {
 		tk.Error = errors.WithStack(ErrRedisNil)
 		return
 	}
-	rs, err := asynq.ParseRedisURI(ops.redisUri)
+	rs, err := asynq.ParseRedisURI(ops.redisURI)
 	if err != nil {
 		tk.Error = errors.WithStack(ErrRedisInvalid)
 		return
 	}
 	// add group prefix to spilt difference group
-	ops.redisPeriodKey = strings.Join([]string{"ops.group", ops.redisPeriodKey}, ".")
-	rd := rs.MakeRedisClient().(redis.UniversalClient)
+	ops.redisPeriodKey = strings.Join([]string{ops.group, ops.redisPeriodKey}, ".")
+	rds := rs.MakeRedisClient().(redis.UniversalClient)
 	client := asynq.NewClient(rs)
 	inspector := asynq.NewInspector(rs)
 	// initialize redis lock
-	nxLock := nx.New(
-		nx.WithRedis(rd),
-		nx.WithExpire(10),
-		nx.WithKey(strings.Join([]string{ops.redisPeriodKey, "lock"}, ".")),
-	)
+	locker := redislock.New(rds)
 	// initialize server
 	srv := asynq.NewServer(
 		rs,
@@ -158,7 +217,10 @@ func New(options ...func(*Options)) (tk *Worker) {
 			Queues: map[string]int{
 				ops.group: 10,
 			},
-			RetryDelayFunc: ops.retryDelayFunc,
+			RetryDelayFunc:           ops.retryDelayFunc,
+			DelayedTaskCheckInterval: ops.delayedTaskCheckInterval,
+			Logger:                   myLogger{},
+			LogLevel:                 levelToAsynq(ops.logLevel),
 		},
 	)
 	go func() {
@@ -169,15 +231,23 @@ func New(options ...func(*Options)) (tk *Worker) {
 		}
 	}()
 	tk.ops = *ops
-	tk.redis = rd
+	tk.redis = rds
 	tk.redisOpt = rs
-	tk.lock = nxLock
+	tk.locker = locker
 	tk.client = client
 	tk.inspector = inspector
+	streamKey := strings.Join([]string{ops.redisPeriodKey, "waiting.stream"}, ".")
+	tk.stream = stream.New(
+		stream.WithRDS(rds),
+		stream.WithKey(streamKey),
+		stream.WithExpire(6*time.Hour),
+	)
+	var rpsInterval int64 = 30
+	tk.streamLimiter = ratecounter.NewRateCounter(time.Duration(rpsInterval) * time.Second)
 	// initialize scanner
 	go func() {
 		for {
-			time.Sleep(time.Second)
+			time.Sleep(ops.scanTaskInterval)
 			tk.scan()
 		}
 	}()
@@ -190,24 +260,116 @@ func New(options ...func(*Options)) (tk *Worker) {
 			}
 		}()
 	}
+	go func() {
+		for {
+			// remove old data, no need execute
+			tk.stream.Trim(context.Background(), int64(ops.streamMaxCount))
+
+			// start consume
+			tk.consumeOneWaiting()
+
+			rps := int(tk.streamLimiter.Rate() / rpsInterval)
+
+			if rps > ops.streamRPS {
+				time.Sleep(10 * time.Second)
+				continue
+			}
+			time.Sleep(3 * time.Second)
+		}
+	}()
 	return
 }
 
-func (wk Worker) Once(options ...func(*RunOptions)) (err error) {
+func (wk Worker) OnceWaiting(ctx context.Context, options ...func(*RunOptions)) (err error) {
+	tr := otel.Tracer("worker")
+	ctx, span := tr.Start(ctx, "OnceWaiting")
+	var traceID, spanID string
+	if s := trace.SpanContextFromContext(ctx); s.HasTraceID() {
+		traceID = s.TraceID().String()
+		spanID = s.SpanID().String()
+	}
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+		}
+		span.End()
+	}()
 	ops := getRunOptionsOrSetDefault(nil)
 	for _, f := range options {
 		f(ops)
 	}
+	span.SetAttributes(
+		attribute.String("uid", ops.uid),
+		attribute.String("group", ops.group),
+		attribute.String("payload", ops.payload),
+	)
 	if ops.uid == "" {
-		err = errors.WithStack(ErrUuidNil)
+		err = errors.WithStack(ErrUUIDNil)
 		return
 	}
-	err = wk.lock.MustLock()
+
+	// only send to wait stream, not execute
+	payload := StreamPayload{
+		TraceID:         traceID,
+		SpanID:          spanID,
+		UID:             ops.uid,
+		Group:           ops.group,
+		Payload:         ops.payload,
+		Retention:       ops.retention,
+		Replace:         strconv.FormatBool(ops.replace),
+		MaxRetry:        ops.maxRetry,
+		MaxArchivedTime: ops.maxArchivedTime,
+		Timeout:         ops.timeout,
+		Now:             strconv.FormatBool(ops.now),
+	}
+	if ops.in != nil {
+		payload.In = ops.in
+	}
+	err = wk.stream.Pub(ctx, payload)
+	wk.streamLimiter.Incr(1)
+	return
+}
+
+func (wk Worker) Once(ctx context.Context, options ...func(*RunOptions)) (err error) {
+	tr := otel.Tracer("worker")
+	ctx, span := tr.Start(ctx, "Once")
+	var traceID, spanID string
+	if s := trace.SpanContextFromContext(ctx); s.HasTraceID() {
+		traceID = s.TraceID().String()
+		spanID = s.SpanID().String()
+	}
+	defer func() {
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
+	ops := getRunOptionsOrSetDefault(nil)
+	for _, f := range options {
+		f(ops)
+	}
+	span.SetAttributes(
+		attribute.String("uid", ops.uid),
+		attribute.String("group", ops.group),
+		attribute.String("payload", ops.payload),
+	)
+	if ops.uid == "" {
+		err = errors.WithStack(ErrUUIDNil)
+		return
+	}
+	lock, err := wk.lock(ctx, ops.uid, *ops)
 	if err != nil {
 		return
 	}
-	defer wk.lock.Unlock()
-	t := asynq.NewTask(strings.Join([]string{ops.group, "once"}, "."), []byte(ops.payload), asynq.TaskID(ops.uid))
+	defer func() {
+		_ = lock.Release(ctx)
+	}()
+	payload, _ := json.Marshal(OncePayload{
+		TraceID: traceID,
+		SpanID:  spanID,
+		Payload: ops.payload,
+	})
+	t := asynq.NewTask(strings.Join([]string{ops.group, "once"}, "."), payload, asynq.TaskID(ops.uid))
 	taskOpts := []asynq.Option{
 		asynq.Queue(wk.ops.group),
 		asynq.MaxRetry(wk.ops.maxRetry),
@@ -228,14 +390,22 @@ func (wk Worker) Once(options ...func(*RunOptions)) (err error) {
 	} else if ops.now {
 		taskOpts = append(taskOpts, asynq.ProcessIn(time.Millisecond))
 	}
-	_, err = wk.client.Enqueue(t, taskOpts...)
-	if ops.replace && errors.Is(err, asynq.ErrTaskIDConflict) {
+	info, err := wk.inspector.GetTaskInfo(wk.ops.group, ops.uid)
+	if err != nil && !strings.Contains(err.Error(), asynq.ErrQueueNotFound.Error()) && !strings.Contains(err.Error(), asynq.ErrTaskNotFound.Error()) {
+		// other error
+		return
+	} else if err != nil && (strings.Contains(err.Error(), asynq.ErrQueueNotFound.Error()) || strings.Contains(err.Error(), asynq.ErrTaskNotFound.Error())) {
+		// no queue or no task
+		_, err = wk.client.Enqueue(t, taskOpts...)
+		return
+	}
+	// task exists
+	if info.State == asynq.TaskStateActive {
+		return
+	}
+	if ops.replace {
 		// remove old one if replace = true
-		ctx := wk.getDefaultTimeoutCtx()
-		if ops.ctx != nil {
-			ctx = ops.ctx
-		}
-		err = wk.Remove(ctx, ops.uid)
+		err = wk.Remove(context.Background(), ops.uid)
 		if err != nil {
 			return
 		}
@@ -244,38 +414,39 @@ func (wk Worker) Once(options ...func(*RunOptions)) (err error) {
 	return
 }
 
-func (wk Worker) Cron(options ...func(*RunOptions)) (err error) {
+func (wk Worker) Cron(ctx context.Context, options ...func(*RunOptions)) (err error) {
 	ops := getRunOptionsOrSetDefault(nil)
 	for _, f := range options {
 		f(ops)
 	}
 	if ops.uid == "" {
-		err = errors.WithStack(ErrUuidNil)
+		err = errors.WithStack(ErrUUIDNil)
 		return
 	}
 	var next int64
-	next, err = getNext(ops.expr, 0)
+	next, _, err = getNext(ops.expr, 0)
 	if err != nil {
 		err = errors.WithStack(ErrExprInvalid)
 		return
 	}
-	err = wk.lock.MustLock()
+	lock, err := wk.lock(ctx, ops.uid, *ops)
 	if err != nil {
 		return
 	}
-	defer wk.lock.Unlock()
+	defer func() {
+		_ = lock.Release(ctx)
+	}()
 	t := periodTask{
 		Expr:     ops.expr,
 		Group:    strings.Join([]string{ops.group, "cron"}, "."),
-		Uid:      ops.uid,
+		UID:      ops.uid,
 		Payload:  ops.payload,
 		Next:     next,
 		MaxRetry: ops.maxRetry,
 		Timeout:  ops.timeout,
 	}
-	ctx := wk.getDefaultTimeoutCtx()
 	// remove old task
-	wk.Remove(ctx, t.Uid)
+	_ = wk.Remove(context.Background(), t.UID)
 	_, err = wk.redis.HSet(ctx, wk.ops.redisPeriodKey, ops.uid, t.String()).Result()
 	if err != nil {
 		err = errors.WithStack(ErrSaveCron)
@@ -291,11 +462,17 @@ func (wk Worker) Remove(ctx context.Context, uid string) (err error) {
 }
 
 func (wk Worker) processed(ctx context.Context, uid string) {
-	err := wk.lock.MustLock(ctx)
+	lock, err := wk.lock(ctx, strings.Join([]string{"processed", uid}, "."), RunOptions{
+		lockerTTL:           wk.ops.lockerTTL,
+		lockerRetryCount:    wk.ops.lockerRetryCount,
+		lockerRetryInterval: wk.ops.lockerRetryInterval,
+	})
 	if err != nil {
 		return
 	}
-	defer wk.lock.Unlock(ctx)
+	defer func() {
+		_ = lock.Release(context.Background())
+	}()
 	t, e := wk.redis.HGet(ctx, wk.ops.redisPeriodKey, uid).Result()
 	if e == nil || !errors.Is(e, redis.Nil) {
 		var item periodTask
@@ -307,20 +484,32 @@ func (wk Worker) processed(ctx context.Context, uid string) {
 }
 
 func (wk Worker) scan() {
-	ctx := wk.getDefaultTimeoutCtx()
-	ok := wk.lock.Lock()
-	if !ok {
+	ctx := context.Background()
+	tr := otel.Tracer("worker")
+	ctx, span := tr.Start(ctx, "scan")
+	defer span.End()
+	lock, err := wk.lock(ctx, "__internal_worker_scan", RunOptions{
+		lockerTTL:           wk.ops.lockerTTL,
+		lockerRetryCount:    wk.ops.lockerRetryCount,
+		lockerRetryInterval: wk.ops.lockerRetryInterval,
+	})
+	if err != nil {
 		return
 	}
-	defer wk.lock.Unlock()
+	defer func() {
+		_ = lock.Release(context.Background())
+	}()
 	m, _ := wk.redis.HGetAll(ctx, wk.ops.redisPeriodKey).Result()
 	p := wk.redis.Pipeline()
 	ops := wk.ops
 	for _, v := range m {
 		var item periodTask
 		item.FromString(v)
-		next, _ := getNext(item.Expr, item.Next)
-		t := asynq.NewTask(item.Group, []byte(item.Payload), asynq.TaskID(item.Uid))
+		if wk.hasTask(item.UID) {
+			continue
+		}
+		next, diff, _ := getNext(item.Expr, item.Next)
+		t := asynq.NewTask(item.Group, []byte(item.Payload), asynq.TaskID(item.UID))
 		taskOpts := []asynq.Option{
 			asynq.Queue(ops.group),
 			asynq.MaxRetry(ops.maxRetry),
@@ -329,7 +518,6 @@ func (wk Worker) scan() {
 		if item.MaxRetry > 0 {
 			taskOpts = append(taskOpts, asynq.MaxRetry(item.MaxRetry))
 		}
-		diff := next - item.Next
 		if diff > 10 {
 			retention := diff / 3
 			if diff > 600 {
@@ -340,11 +528,11 @@ func (wk Worker) scan() {
 			taskOpts = append(taskOpts, asynq.Retention(time.Duration(retention)*time.Second))
 		}
 		taskOpts = append(taskOpts, asynq.ProcessAt(time.Unix(item.Next, 0)))
-		_, err := wk.client.Enqueue(t, taskOpts...)
+		_, err = wk.client.Enqueue(t, taskOpts...)
 		// enqueue success, update next
 		if err == nil {
 			item.Next = next
-			p.HSet(ctx, wk.ops.redisPeriodKey, item.Uid, item.String())
+			p.HSet(ctx, wk.ops.redisPeriodKey, item.UID, item.String())
 		}
 	}
 	// batch save to cache
@@ -352,12 +540,20 @@ func (wk Worker) scan() {
 	return
 }
 
+func (wk Worker) hasTask(id string) bool {
+	task, _ := wk.inspector.GetTaskInfo(wk.ops.group, id)
+	if task != nil {
+		return true
+	}
+	return false
+}
+
 func (wk Worker) clearArchived() {
 	list, err := wk.inspector.ListArchivedTasks(wk.ops.group, asynq.Page(1), asynq.PageSize(100))
 	if err != nil {
 		return
 	}
-	ctx := wk.getDefaultTimeoutCtx()
+	ctx := context.Background()
 	for _, item := range list {
 		last := carbon.CreateFromStdTime(item.LastFailedAt)
 		if !last.IsZero() && item.Retried < item.MaxRetry {
@@ -368,12 +564,12 @@ func (wk Worker) clearArchived() {
 		if strings.HasSuffix(item.Type, ".cron") {
 			// cron task
 			t, e := wk.redis.HGet(ctx, wk.ops.redisPeriodKey, uid).Result()
-			if e == nil || e != redis.Nil {
+			if e == nil || !errors.Is(e, redis.Nil) {
 				var task periodTask
 				task.FromString(t)
-				next, _ := getNext(task.Expr, task.Next)
+				_, diff, _ := getNext(task.Expr, task.Next)
 				// default archived 1/2 task interval
-				archivedTime = int((next - task.Next) / 2)
+				archivedTime = int((diff) / 2)
 				if task.MaxArchivedTime > 0 {
 					archivedTime = task.MaxArchivedTime
 				}
@@ -386,26 +582,108 @@ func (wk Worker) clearArchived() {
 			}
 		}
 		if carbon.Now().Gt(last.AddSeconds(archivedTime)) {
-			wk.inspector.DeleteTask(wk.ops.group, uid)
+			_ = wk.Remove(ctx, uid)
 		}
 	}
 }
 
-func (wk Worker) getDefaultTimeoutCtx() context.Context {
-	c, _ := context.WithTimeout(context.Background(), time.Duration(wk.ops.timeout)*time.Second)
-	return c
+func (wk Worker) consumeOneWaiting() {
+	var err error
+	ctx := context.Background()
+	tr := otel.Tracer("worker")
+	ctx, span := tr.Start(ctx, "consumeOneWaiting")
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+		}
+		span.End()
+	}()
+	msgs, err := wk.stream.ReadBatch(ctx, int64(wk.ops.streamMaxCount))
+	if err != nil {
+		return
+	}
+	var lastID string
+	for _, msg := range msgs {
+		var data StreamPayload
+		str, _ := json.Marshal(msg.Values)
+		_ = json.Unmarshal(str, &data)
+		traceFromHex, _ := trace.TraceIDFromHex(data.TraceID)
+		spanFromHex, _ := trace.SpanIDFromHex(data.SpanID)
+		sc := trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    traceFromHex,
+			SpanID:     spanFromHex,
+			TraceFlags: trace.FlagsSampled,
+		})
+		onceCtx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
+
+		options := []func(*RunOptions){
+			WithRunUUID(data.UID),
+			WithRunGroup(data.Group),
+			WithRunPayload(data.Payload),
+			WithRunRetention(data.Retention),
+			WithRunMaxRetry(data.MaxRetry),
+			WithRunMaxArchivedTime(data.MaxArchivedTime),
+			WithRunTimeout(data.Timeout),
+		}
+		if data.Replace == "true" {
+			options = append(options, WithRunReplace(true))
+		}
+		if data.Now == "true" {
+			options = append(options, WithRunNow(true))
+		}
+		if data.In != nil {
+			options = append(options, WithRunIn(*data.In))
+		}
+		// add once task
+		err = wk.Once(onceCtx, options...)
+		lastID = msg.ID
+	}
+	if lastID == "" {
+		return
+	}
+	wk.stream.TrimLteMinID(context.Background(), lastID)
 }
 
-func getNext(expr string, timestamp int64) (next int64, err error) {
+func (wk Worker) lock(ctx context.Context, prefix string, ops RunOptions) (*redislock.Lock, error) {
+	tr := otel.Tracer("worker")
+	ctx, span := tr.Start(ctx, "lock")
+	defer span.End()
+	key := strings.Join([]string{wk.ops.redisPeriodKey, prefix, "lock"}, ".")
+	lock, err := wk.locker.Obtain(
+		ctx,
+		key,
+		ops.lockerTTL,
+		&redislock.Options{
+			RetryStrategy: redislock.LimitRetry(redislock.LinearBackoff(ops.lockerRetryInterval), ops.lockerRetryCount),
+		},
+	)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+	}
+	return lock, err
+}
+
+func getNext(expr string, timestamp int64) (end, diff int64, err error) {
 	var e *cronexpr.Expression
 	e, err = cronexpr.Parse(expr)
 	if err != nil {
 		return
 	}
-	t := carbon.Now().ToStdTime()
+	now := carbon.Now()
+	nowTimestamp := now.Timestamp()
+	t := now.StdTime()
+	start := nowTimestamp
 	if timestamp > 0 {
-		t = carbon.CreateFromTimestamp(timestamp).ToStdTime()
+		t = carbon.CreateFromTimestamp(timestamp).StdTime()
+		start = timestamp
 	}
-	next = e.Next(t).Unix()
+	end = e.Next(t).Unix()
+	// time has expired
+	if end < nowTimestamp {
+		end = e.Next(now.StdTime()).Unix()
+		start = nowTimestamp
+	}
+	// calc diff
+	diff = end - start
 	return
 }

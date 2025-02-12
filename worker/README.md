@@ -12,13 +12,15 @@ go get -u github.com/go-cinch/common/worker
 import (
 	"context"
 	"fmt"
+
 	"github.com/go-cinch/common/worker"
-	"time"
 )
 
 func main() {
 	wk := worker.New(
-		worker.WithRedisUri("redis://127.0.0.1:6379/0"),
+		// redis://[:password@]host[:port][/dbnumber]
+		// worker.WithRedisURI("redis://:password@127.0.0.1:6379/0"),
+		worker.WithRedisURI("redis://127.0.0.1:6379/0"),
 		worker.WithHandler(process),
 	)
 	err := wk.Error
@@ -27,28 +29,31 @@ func main() {
 	}
 
 	// 1. cron task
-	wk.Cron(
-		worker.WithRunUuid("order1"),
+	_ = wk.Cron(
+		context.Background(),
+		worker.WithRunUUID("order1"),
 		worker.WithRunGroup("task1"),
 		worker.WithRunExpr("0/1 * * * ?"),
 	)
 
 	// 2. once task
-	wk.Once(
-		worker.WithRunUuid("order2"),
+	_ = wk.Once(
+		context.Background(),
+		worker.WithRunUUID("order2"),
 		worker.WithRunGroup("task2"),
 		worker.WithRunNow(true),
 	)
 
-	time.Sleep(time.Hour)
+	ch := make(chan struct{})
+	<-ch
 }
 
 func process(ctx context.Context, p worker.Payload) (err error) {
 	switch p.Group {
 	case "task1":
-		fmt.Println(ctx, p.Uid)
+		fmt.Println(ctx, p.UID)
 	case "task2":
-		fmt.Println(ctx, p.Uid)
+		fmt.Println(ctx, p.UID)
 	}
 	return
 }
@@ -59,7 +64,7 @@ func process(ctx context.Context, p worker.Payload) (err error) {
 ### WorkerOptions
 
 - `WithGroup` - group name, default task
-- `WithRedisUri` - redis uri, default redis://127.0.0.1:6379/0
+- `WithRedisURI` - redis uri, default redis://127.0.0.1:6379/0
 - `WithRedisPeriodKey` - cron task cache key
 - `WithRetention` - success task store time, default 60s, if this option is provided, the task will be stored as a
   completed task after successful processing
@@ -75,7 +80,7 @@ func process(ctx context.Context, p worker.Payload) (err error) {
 
 cron task, can be executed multiple times
 
-- `WithRunUuid` - task unique id
+- `WithRunUUID` - task unique id
 - `WithRunGroup` - group prefix, default group
 - `WithRunPayload` - task payload
 - `WithRunExpr` - cron expr, mini is one minute, refer to [gorhill/cronexpr](https://github.com/gorhill/cronexpr)
@@ -86,7 +91,7 @@ cron task, can be executed multiple times
 
 once task, execute only once
 
-- `WithRunUuid` - task unique id
+- `WithRunUUID` - task unique id
 - `WithRunGroup` - group prefix, default group
 - `WithRunPayload` - task payload
 - `WithRunMaxRetry` - max retry count when task has error

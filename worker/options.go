@@ -2,24 +2,34 @@ package worker
 
 import (
 	"context"
-	"github.com/hibiken/asynq"
 	"reflect"
 	"time"
+
+	"github.com/go-cinch/common/log"
+	"github.com/hibiken/asynq"
 )
 
 type Options struct {
-	group             string
-	redisUri          string
-	redisPeriodKey    string
-	retention         int
-	maxRetry          int
-	retryDelayFunc    func(n int, e error, t *asynq.Task) time.Duration
-	handler           func(ctx context.Context, p Payload) error
-	handlerNeedWorker func(worker Worker, ctx context.Context, p Payload) error
-	callback          string
-	clearArchived     int
-	maxArchivedTime   int
-	timeout           int
+	group                    string
+	redisURI                 string
+	redisPeriodKey           string
+	retention                int
+	maxRetry                 int
+	retryDelayFunc           func(n int, e error, t *asynq.Task) time.Duration
+	handler                  func(ctx context.Context, p Payload) error
+	handlerNeedWorker        func(ctx context.Context, worker Worker, p Payload) error
+	callback                 string
+	clearArchived            int
+	maxArchivedTime          int
+	timeout                  int
+	delayedTaskCheckInterval time.Duration
+	scanTaskInterval         time.Duration
+	logLevel                 log.Level
+	lockerTTL                time.Duration
+	lockerRetryCount         int
+	lockerRetryInterval      time.Duration
+	streamMaxCount           int // once stream when count > streamMaxCount, overflow data will be removed later
+	streamRPS                int // once stream when RPS(request per second) > streamRPS, will sleep more time to process stream queue
 }
 
 func WithGroup(s string) func(*Options) {
@@ -28,9 +38,9 @@ func WithGroup(s string) func(*Options) {
 	}
 }
 
-func WithRedisUri(s string) func(*Options) {
+func WithRedisURI(s string) func(*Options) {
 	return func(options *Options) {
-		getOptionsOrSetDefault(options).redisUri = s
+		getOptionsOrSetDefault(options).redisURI = s
 	}
 }
 
@@ -68,7 +78,7 @@ func WithHandler(fun func(ctx context.Context, p Payload) error) func(*Options) 
 	}
 }
 
-func WithHandlerNeedWorker(fun func(worker Worker, ctx context.Context, p Payload) error) func(*Options) {
+func WithHandlerNeedWorker(fun func(ctx context.Context, worker Worker, p Payload) error) func(*Options) {
 	return func(options *Options) {
 		if fun != nil {
 			getOptionsOrSetDefault(options).handlerNeedWorker = fun
@@ -106,38 +116,109 @@ func WithTimeout(second int) func(*Options) {
 	}
 }
 
+func WithDelayedTaskCheckInterval(duration time.Duration) func(*Options) {
+	return func(options *Options) {
+		if duration > 0 {
+			getOptionsOrSetDefault(options).delayedTaskCheckInterval = duration
+		}
+	}
+}
+
+func WithScanTaskInterval(duration time.Duration) func(*Options) {
+	return func(options *Options) {
+		if duration > 0 {
+			getOptionsOrSetDefault(options).scanTaskInterval = duration
+		}
+	}
+}
+
+func WithLogLevel(level log.Level) func(*Options) {
+	return func(options *Options) {
+		getOptionsOrSetDefault(options).logLevel = level
+	}
+}
+
+func WithLockerTTL(duration time.Duration) func(*Options) {
+	return func(options *Options) {
+		getOptionsOrSetDefault(options).lockerTTL = duration
+	}
+}
+
+func WithLockerRetryCount(count int) func(*Options) {
+	return func(options *Options) {
+		if count > 0 {
+			getOptionsOrSetDefault(options).lockerRetryCount = count
+		}
+	}
+}
+
+func WithLockerRetryInterval(duration time.Duration) func(*Options) {
+	return func(options *Options) {
+		getOptionsOrSetDefault(options).lockerRetryInterval = duration
+	}
+}
+
+func WithStreamMaxCount(count int) func(*Options) {
+	return func(options *Options) {
+		if count > 0 {
+			getOptionsOrSetDefault(options).streamMaxCount = count
+		}
+	}
+}
+
+func WithStreamRPS(count int) func(*Options) {
+	return func(options *Options) {
+		if count > 0 {
+			getOptionsOrSetDefault(options).streamRPS = count
+		}
+	}
+}
+
 func getOptionsOrSetDefault(options *Options) *Options {
 	if options == nil {
 		return &Options{
 			group:          "task",
-			redisUri:       "redis://127.0.0.1:6379/0",
+			redisURI:       "redis://127.0.0.1:6379/0",
 			redisPeriodKey: "period",
 			retention:      60,
 			maxRetry:       3,
 			clearArchived:  300,
 			timeout:        10,
+			// if u need run seconds expr, must set this param < one period
+			// for example, expr is */2 * * * * * *, delayedTaskCheckInterval < 2 * time.Second can work well
+			delayedTaskCheckInterval: 5 * time.Second,
+			// if u need run seconds expr, must set this param < one period
+			scanTaskInterval:    time.Second,
+			logLevel:            log.InfoLevel,
+			lockerTTL:           time.Minute,
+			lockerRetryCount:    40,
+			lockerRetryInterval: 25 * time.Millisecond,
+			streamMaxCount:      5000,
+			streamRPS:           100,
 		}
 	}
 	return options
 }
 
 type RunOptions struct {
-	uid             string
-	group           string
-	payload         string
-	expr            string          // only period task
-	in              *time.Duration  // only once task
-	at              *time.Time      // only once task
-	now             bool            // only once task
-	retention       int             // only once task
-	replace         bool            // only once task
-	ctx             context.Context // only once task
-	maxRetry        int
-	maxArchivedTime int
-	timeout         int
+	uid                 string
+	group               string
+	payload             string
+	expr                string         // only period task, seconds expr: */30 * * * * * *, minutes expr: 0 */5 * * * * *
+	in                  *time.Duration // only once task
+	at                  *time.Time     // only once task
+	now                 bool           // only once task
+	retention           int            // only once task
+	replace             bool           // only once task
+	maxRetry            int
+	maxArchivedTime     int
+	timeout             int
+	lockerTTL           time.Duration
+	lockerRetryCount    int
+	lockerRetryInterval time.Duration
 }
 
-func WithRunUuid(s string) func(*RunOptions) {
+func WithRunUUID(s string) func(*RunOptions) {
 	return func(options *RunOptions) {
 		getRunOptionsOrSetDefault(options).uid = s
 	}
@@ -194,14 +275,6 @@ func WithRunReplace(flag bool) func(*RunOptions) {
 	}
 }
 
-func WithRunCtx(ctx context.Context) func(*RunOptions) {
-	return func(options *RunOptions) {
-		if !interfaceIsNil(ctx) {
-			getRunOptionsOrSetDefault(options).ctx = ctx
-		}
-	}
-}
-
 func WithRunMaxRetry(count int) func(*RunOptions) {
 	return func(options *RunOptions) {
 		getRunOptionsOrSetDefault(options).maxRetry = count
@@ -224,11 +297,34 @@ func WithRunMaxArchivedTime(second int) func(*RunOptions) {
 	}
 }
 
+func WithRunLockerTTL(duration time.Duration) func(*RunOptions) {
+	return func(options *RunOptions) {
+		getRunOptionsOrSetDefault(options).lockerTTL = duration
+	}
+}
+
+func WithRunLockerRetryCount(count int) func(*RunOptions) {
+	return func(options *RunOptions) {
+		if count > 0 {
+			getRunOptionsOrSetDefault(options).lockerRetryCount = count
+		}
+	}
+}
+
+func WithRunLockerRetryInterval(duration time.Duration) func(*RunOptions) {
+	return func(options *RunOptions) {
+		getRunOptionsOrSetDefault(options).lockerRetryInterval = duration
+	}
+}
+
 func getRunOptionsOrSetDefault(options *RunOptions) *RunOptions {
 	if options == nil {
 		return &RunOptions{
-			group:   "group",
-			timeout: 60,
+			group:               "group",
+			timeout:             60,
+			lockerTTL:           time.Minute,
+			lockerRetryCount:    40,
+			lockerRetryInterval: 25 * time.Millisecond,
 		}
 	}
 	return options
