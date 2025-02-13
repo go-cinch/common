@@ -27,9 +27,9 @@ func NewSonyflake(options ...func(*SonyflakeOptions)) *Sonyflake {
 	st := sonyflake.Settings{
 		StartTime: ops.startTime,
 	}
-	if ops.machineId > 0 {
+	if ops.machineID > 0 {
 		st.MachineID = func() (uint16, error) {
-			return ops.machineId, nil
+			return ops.machineID, nil
 		}
 	}
 	ins := sonyflake.NewSonyflake(st)
