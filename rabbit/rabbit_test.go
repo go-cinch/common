@@ -56,4 +56,5 @@ func TestNew(t *testing.T) {
 		WithQueueName("dlq"),
 		WithQueueRouteKeys("dlr"),
 	).Error
+	t.Log(err)
 }

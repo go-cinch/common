@@ -1,14 +1,15 @@
 package rabbit
 
 import (
+	"strings"
+	"sync/atomic"
+	"time"
+
 	"github.com/go-cinch/common/log"
 	"github.com/google/uuid"
 	"github.com/houseofcat/turbocookedrabbit/v2/pkg/tcr"
 	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
-	"strings"
-	"sync/atomic"
-	"time"
 )
 
 type Rabbit struct {

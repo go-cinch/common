@@ -2,10 +2,10 @@ package rabbit
 
 import (
 	"context"
-	"fmt"
-	"google.golang.org/protobuf/types/known/emptypb"
 	"testing"
 	"time"
+
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestExchange_PublishProto(t *testing.T) {
@@ -33,7 +33,7 @@ func TestExchange_PublishProto(t *testing.T) {
 				WithPublishRouteKey("rt2"),
 				WithPublishCtx(context.Background()),
 			)
-			fmt.Println(time.Now(), "send 1 end", err)
+			t.Log(time.Now(), "send 1 end", err)
 		}()
 		go func() {
 			var mqPb emptypb.Empty
@@ -42,7 +42,7 @@ func TestExchange_PublishProto(t *testing.T) {
 				WithPublishRouteKey("rt2"),
 				WithPublishCtx(context.Background()),
 			)
-			fmt.Println(time.Now(), "send 2 end", err)
+			t.Log(time.Now(), "send 2 end", err)
 		}()
 		go func() {
 			var mqPb emptypb.Empty
@@ -51,9 +51,9 @@ func TestExchange_PublishProto(t *testing.T) {
 				WithPublishRouteKey("rt2"),
 				WithPublishCtx(context.Background()),
 			)
-			fmt.Println(time.Now(), "send 3 end", err)
+			t.Log(time.Now(), "send 3 end", err)
 		}()
-		fmt.Println()
+		t.Log()
 	}
 
 }
@@ -80,6 +80,6 @@ func TestExchange_PublishProto2(t *testing.T) {
 			&mqPb,
 			WithPublishRouteKey("rt1"),
 		)
-		fmt.Println(time.Now(), "send end", err)
+		t.Log(time.Now(), "send end", err)
 	}
 }

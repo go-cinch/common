@@ -7,7 +7,7 @@ import (
 
 // StructMd5 get struct md5 string by json
 func StructMd5(o interface{}) string {
-	str := Struct2Json(o)
+	str := Struct2JSON(o)
 	h := md5.New()
 	h.Write([]byte(str))
 	data := h.Sum([]byte(nil))

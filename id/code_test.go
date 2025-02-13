@@ -1,7 +1,6 @@
 package id
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -18,13 +17,13 @@ func TestNewCode(t *testing.T) {
 			WithCodeL(5),
 			WithCodeSalt(56789),
 		)
-		fmt.Println(item)
+		t.Log(item)
 	}
 	var j uint64
 	for j < 1000 {
 		j++
 		// default option
 		item := NewCode(j)
-		fmt.Println(item)
+		t.Log(item)
 	}
 }

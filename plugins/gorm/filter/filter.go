@@ -24,19 +24,17 @@ type Filter interface {
 	// SELECT * FROM @@table
 	// {{if len(cols) == len(vals)}}
 	//  {{where}}
-	//     {{for i, col := range cols}}
-	//       {{for j, val := range vals}}
-	//         {{if i == j}}
-	//           {{if val != ""}}
-	//             {{if strings.HasPrefix(val, "%") && strings.HasSuffix(val, "%")}}
-	//               @@col LIKE concat('%', TRIM(BOTH '%' FROM @val), '%') AND
-	//             {{else if strings.HasPrefix(val, "%")}}
-	//               @@col LIKE concat('%', TRIM(BOTH '%' FROM @val)) AND
-	//             {{else if strings.HasSuffix(val, "%")}}
-	//               @@col LIKE concat(TRIM(BOTH '%' FROM @val), '%') AND
-	//             {{else}}
-	//               @@col = @val AND
-	//             {{end}}
+	//     {{for colIndex, col := range cols}}
+	//       {{for valIndex, val := range vals}}
+	//         {{if colIndex == valIndex}}
+	//           {{if strings.HasPrefix(val, "%") && strings.HasSuffix(val, "%")}}
+	//             @@col LIKE concat('%', TRIM(BOTH '%' FROM @val), '%') AND
+	//           {{else if strings.HasPrefix(val, "%")}}
+	//             @@col LIKE concat('%', TRIM(BOTH '%' FROM @val)) AND
+	//           {{else if strings.HasSuffix(val, "%")}}
+	//             @@col LIKE concat(TRIM(BOTH '%' FROM @val), '%') AND
+	//           {{else}}
+	//             @@col = @val AND
 	//           {{end}}
 	//         {{end}}
 	//       {{end}}
@@ -47,35 +45,31 @@ type Filter interface {
 	GetByCols(cols, vals []string) gen.T
 	// SELECT * FROM @@table
 	// {{where}}
-	//   {{if val != ""}}
-	//     {{if strings.HasPrefix(val, "%") && strings.HasSuffix(val, "%")}}
-	//       @@col LIKE concat('%', TRIM(BOTH '%' FROM @val), '%')
-	//     {{else if strings.HasPrefix(val, "%")}}
-	//       @@col LIKE concat('%', TRIM(BOTH '%' FROM @val))
-	//     {{else if strings.HasSuffix(val, "%")}}
-	//       @@col LIKE concat(TRIM(BOTH '%' FROM @val), '%')
-	//     {{else}}
-	//       @@col = @val
-	//     {{end}}
+	//   {{if strings.HasPrefix(val, "%") && strings.HasSuffix(val, "%")}}
+	//     @@col LIKE concat('%', TRIM(BOTH '%' FROM @val), '%')
+	//   {{else if strings.HasPrefix(val, "%")}}
+	//     @@col LIKE concat('%', TRIM(BOTH '%' FROM @val))
+	//   {{else if strings.HasSuffix(val, "%")}}
+	//     @@col LIKE concat(TRIM(BOTH '%' FROM @val), '%')
+	//   {{else}}
+	//     @@col = @val
 	//   {{end}}
 	// {{end}}
 	FindByCol(col, val string) []gen.T
 	// SELECT * FROM @@table
 	// {{if len(cols) == len(vals)}}
 	//  {{where}}
-	//     {{for i, col := range cols}}
-	//       {{for j, val := range vals}}
-	//         {{if i == j}}
-	//           {{if val != ""}}
-	//             {{if strings.HasPrefix(val, "%") && strings.HasSuffix(val, "%")}}
-	//               @@col LIKE concat('%', TRIM(BOTH '%' FROM @val), '%') AND
-	//             {{else if strings.HasPrefix(val, "%")}}
-	//               @@col LIKE concat('%', TRIM(BOTH '%' FROM @val)) AND
-	//             {{else if strings.HasSuffix(val, "%")}}
-	//               @@col LIKE concat(TRIM(BOTH '%' FROM @val), '%') AND
-	//             {{else}}
-	//               @@col = @val AND
-	//             {{end}}
+	//     {{for colIndex, col := range cols}}
+	//       {{for valIndex, val := range vals}}
+	//         {{if colIndex == valIndex}}
+	//           {{if strings.HasPrefix(val, "%") && strings.HasSuffix(val, "%")}}
+	//             @@col LIKE concat('%', TRIM(BOTH '%' FROM @val), '%') AND
+	//           {{else if strings.HasPrefix(val, "%")}}
+	//             @@col LIKE concat('%', TRIM(BOTH '%' FROM @val)) AND
+	//           {{else if strings.HasSuffix(val, "%")}}
+	//             @@col LIKE concat(TRIM(BOTH '%' FROM @val), '%') AND
+	//           {{else}}
+	//             @@col = @val AND
 	//           {{end}}
 	//         {{end}}
 	//       {{end}}

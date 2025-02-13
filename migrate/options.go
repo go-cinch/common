@@ -31,7 +31,7 @@ func WithDriver(s string) func(*Options) {
 	}
 }
 
-func WithUri(s string) func(*Options) {
+func WithURI(s string) func(*Options) {
 	return func(options *Options) {
 		getOptionsOrSetDefault(options).uri = s
 	}

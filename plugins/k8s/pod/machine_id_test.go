@@ -1,12 +1,11 @@
 package pod
 
 import (
-	"fmt"
 	"os"
 	"testing"
 )
 
-func TestMachineId(t *testing.T) {
+func TestMachineID(t *testing.T) {
 	ips := []string{
 		"123456",
 		"127.0.1.1",
@@ -28,7 +27,7 @@ func TestMachineId(t *testing.T) {
 	}
 	for _, item := range ips {
 		_ = os.Setenv("POD_IP", item)
-		id, err := MachineId()
-		fmt.Printf("get machine id %d from %s, err: %v\n", id, item, err)
+		id, err := MachineID()
+		t.Logf("get machine id %d from %s, err: %v", id, item, err)
 	}
 }

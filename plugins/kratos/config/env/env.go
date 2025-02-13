@@ -1,10 +1,11 @@
 package env
 
 import (
-	"github.com/go-cinch/common/copierx"
 	"strconv"
 	"strings"
 	"syscall"
+
+	"github.com/go-cinch/common/copierx"
 )
 
 func NewRevolver(options ...func(*Options)) func(map[string]interface{}) error {
@@ -78,7 +79,7 @@ func envResolver(ops Options, sub map[string]interface{}) error {
 					if index > 0 {
 						// increase vt cap
 						// new a copy
-						m:= make(map[string]interface{}, len(v0))
+						m := make(map[string]interface{}, len(v0))
 						copierx.Copy(&m, v0)
 						vt = append(vt, m)
 					}

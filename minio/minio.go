@@ -3,18 +3,19 @@ package minio
 import (
 	"context"
 	"errors"
-	"github.com/golang-module/carbon/v2"
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/golang-module/carbon/v2"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 type Token struct {
-	Uri  string            `json:"uri,omitempty"`
+	URI  string            `json:"uri,omitempty"`
 	Data map[string]string `json:"data,omitempty"`
 }
 
@@ -127,7 +128,7 @@ func (m *Minio) Token(ctx context.Context, object string) (token Token, err erro
 		err = errors.New(strings.Join([]string{ErrTokenSignFailed.Error(), err.Error()}, " "))
 		return
 	}
-	token.Uri = uri.String()
+	token.URI = uri.String()
 	token.Data = formData
 	return
 }

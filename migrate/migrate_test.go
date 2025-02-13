@@ -13,12 +13,16 @@ var sqlFs embed.FS
 func TestDo(t *testing.T) {
 	err := Do(
 		WithCtx(context.WithValue(context.Background(), "k", "v")),
-		WithUri("root:root@tcp(127.0.0.1:4306)/test?charset=utf8mb4&parseTime=True&timeout=10000ms"),
+		WithURI("root:password@tcp(127.0.0.1:3306)/test?charset=utf8mb4&parseTime=True&timeout=10000ms"),
 		WithFs(sqlFs),
 		WithFsRoot("db"),
 		WithBefore(beforeMigrate),
 	)
-	fmt.Println(err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	t.Log()
 }
 
 func beforeMigrate(ctx context.Context) (err error) {

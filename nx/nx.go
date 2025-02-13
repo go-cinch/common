@@ -11,6 +11,7 @@ type Nx struct {
 	valid bool
 }
 
+// Deprecated: use github.com/bsm/redislock instead, example: https://github.com/go-cinch/common/blob/worker/v1.1.0/worker/worker.go#L221
 func New(options ...func(*Options)) (nx *Nx) {
 	ops := getOptionsOrSetDefault(nil)
 	for _, f := range options {

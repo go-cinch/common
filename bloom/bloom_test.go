@@ -2,10 +2,11 @@ package bloom
 
 import (
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 func TestNew(t *testing.T) {
@@ -28,11 +29,11 @@ func TestNew(t *testing.T) {
 	j := 10000999000
 	for j < 10001000999 {
 		if b.Exist(strconv.Itoa(j)) {
-			fmt.Printf("%d possible exist\n", j)
+			t.Logf("%d possible exist", j)
 		} else {
-			fmt.Printf("%d not exist\n", j)
+			t.Logf("%d not exist", j)
 		}
 		j++
 	}
-	fmt.Println("end")
+	t.Log("end")
 }

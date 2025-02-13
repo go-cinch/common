@@ -1,6 +1,6 @@
-~~# Log
+# Log
 
-simple log wrapper based on [kratos log](https://go-kratos.dev/en/docs/component/log).
+simple log wrapper based on [logrus](https://github.com/sirupsen/logrus).
 
 ## Characteristic
 

@@ -2,7 +2,6 @@ package utils
 
 import (
 	"context"
-	"fmt"
 	"testing"
 )
 
@@ -11,5 +10,5 @@ func TestParseRedisURI(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(client.Ping(context.Background()))
+	t.Log(client.Ping(context.Background()))
 }

@@ -3,13 +3,14 @@ package i18n
 import (
 	"embed"
 	"encoding/json"
+	"os"
+	"path/filepath"
+
 	"github.com/BurntSushi/toml"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/pkg/errors"
 	"golang.org/x/text/language"
 	"gopkg.in/yaml.v3"
-	"os"
-	"path/filepath"
 )
 
 type I18n struct {
@@ -90,7 +91,7 @@ func (i *I18n) Add(f string) {
 		return
 	}
 	if info.IsDir() {
-		filepath.Walk(f, func(path string, fi os.FileInfo, errBack error) (err error) {
+		filepath.Walk(f, func(path string, fi os.FileInfo, _ error) (err error) {
 			if !fi.IsDir() {
 				i.bundle.LoadMessageFile(path)
 			}

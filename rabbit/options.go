@@ -2,9 +2,10 @@ package rabbit
 
 import (
 	"context"
-	"github.com/streadway/amqp"
-	"github.com/thoas/go-funk"
 	"reflect"
+
+	"github.com/samber/lo"
+	"github.com/streadway/amqp"
 )
 
 type Options struct {
@@ -329,7 +330,7 @@ func WithPublishRouteKey(keys ...string) func(*PublishOptions) {
 	return func(options *PublishOptions) {
 		d := getPublishOptionsOrSetDefault(options)
 		for _, item := range keys {
-			if !funk.ContainsString(d.routeKeys, item) {
+			if !lo.Contains(d.routeKeys, item) {
 				d.routeKeys = append(d.routeKeys, item)
 			}
 		}
@@ -387,7 +388,7 @@ type ConsumeOptions struct {
 	nackRequeue       bool
 	nackRetry         bool
 	nackMaxRetryCount int32
-	autoRequestId     bool
+	autoRequestID     bool
 	oneCtx            context.Context
 }
 
@@ -447,9 +448,9 @@ func WithConsumeNackMaxRetryCount(i int32) func(*ConsumeOptions) {
 	}
 }
 
-func WithConsumeAutoRequestId(flag bool) func(*ConsumeOptions) {
+func WithConsumeAutoRequestID(flag bool) func(*ConsumeOptions) {
 	return func(options *ConsumeOptions) {
-		getConsumeOptionsOrSetDefault(options).autoRequestId = flag
+		getConsumeOptionsOrSetDefault(options).autoRequestID = flag
 	}
 }
 

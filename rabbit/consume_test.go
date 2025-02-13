@@ -3,10 +3,10 @@ package rabbit
 import (
 	"context"
 	"fmt"
-	"github.com/streadway/amqp"
-	"os"
 	"testing"
 	"time"
+
+	"github.com/streadway/amqp"
 )
 
 func TestQueue_Consume(t *testing.T) {
@@ -28,12 +28,11 @@ func TestQueue_Consume(t *testing.T) {
 
 	err := qu.Consume(
 		handler,
-		WithConsumeAutoRequestId(true),
+		WithConsumeAutoRequestID(true),
 	)
 	if err != nil {
-		fmt.Println(err)
+		t.Log(err)
 	}
-	os.Exit(0)
 }
 
 func handler(ctx context.Context, q string, delivery amqp.Delivery) bool {
@@ -60,6 +59,6 @@ func TestQueue_ConsumeOne(t *testing.T) {
 			10,
 			handler,
 		)
-		fmt.Println(time.Now(), err)
+		t.Log(time.Now(), err)
 	}
 }

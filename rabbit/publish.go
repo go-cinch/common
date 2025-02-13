@@ -1,13 +1,14 @@
 package rabbit
 
 import (
+	"sync/atomic"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/houseofcat/turbocookedrabbit/v2/pkg/tcr"
 	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
 	"google.golang.org/protobuf/proto"
-	"sync/atomic"
-	"time"
 )
 
 type Publish struct {
@@ -30,8 +31,8 @@ func (ex *Exchange) PublishProto(m proto.Message, options ...func(*PublishOption
 	return
 }
 
-// PublishJson publish str msg
-func (ex *Exchange) PublishJson(m string, options ...func(*PublishOptions)) (err error) {
+// PublishJSON publish str msg
+func (ex *Exchange) PublishJSON(m string, options ...func(*PublishOptions)) (err error) {
 	err = ex.PublishByte([]byte(m), options...)
 	return
 }

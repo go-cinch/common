@@ -72,14 +72,14 @@ func getCodeOptionsOrSetDefault(options *CodeOptions) *CodeOptions {
 }
 
 type SonyflakeOptions struct {
-	machineId uint16
+	machineID uint16
 	startTime time.Time
 }
 
-func WithSonyflakeMachineId(id uint16) func(*SonyflakeOptions) {
+func WithSonyflakeMachineID(id uint16) func(*SonyflakeOptions) {
 	return func(options *SonyflakeOptions) {
 		if id > 0 {
-			getSonyflakeOptionsOrSetDefault(options).machineId = id
+			getSonyflakeOptionsOrSetDefault(options).machineID = id
 		}
 	}
 }

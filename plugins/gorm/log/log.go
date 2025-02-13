@@ -3,13 +3,14 @@ package log
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/go-cinch/common/log"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type gormLogger struct {
@@ -18,16 +19,16 @@ type gormLogger struct {
 	normalStr, normalErrStr, slowStr, slowErrStr string
 }
 
-type hiddenSqlCxtKey struct{}
+type hiddenSQLCxtKey struct{}
 
-// NewHiddenSqlContext returns a new Context with hidden sql
-func NewHiddenSqlContext(ctx context.Context) context.Context {
-	return context.WithValue(ctx, hiddenSqlCxtKey{}, hiddenSqlCxtKey{})
+// NewHiddenSQLContext returns a new Context with hidden sql
+func NewHiddenSQLContext(ctx context.Context) context.Context {
+	return context.WithValue(ctx, hiddenSQLCxtKey{}, hiddenSQLCxtKey{})
 }
 
-// FromHiddenSqlContext hidden sql or not
-func FromHiddenSqlContext(ctx context.Context) (ok bool) {
-	_, ok = ctx.Value(hiddenSqlCxtKey{}).(hiddenSqlCxtKey)
+// FromHiddenSQLContext hidden sql or not
+func FromHiddenSQLContext(ctx context.Context) (ok bool) {
+	_, ok = ctx.Value(hiddenSQLCxtKey{}).(hiddenSQLCxtKey)
 	return
 }
 
@@ -95,8 +96,8 @@ func (l gormLogger) Trace(ctx context.Context, begin time.Time, fc func() (strin
 		if rows > -1 {
 			row = strconv.FormatInt(rows, 10)
 		}
-		if FromHiddenSqlContext(ctx) {
-			sql = "(sql is hidden)"
+		if FromHiddenSQLContext(ctx) {
+			sql = "(SQL is hidden)"
 		}
 		switch {
 		case l.level >= logger.Error && err != nil && !errors.Is(err, gorm.ErrRecordNotFound):

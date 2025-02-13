@@ -2,12 +2,13 @@ package migrate
 
 import (
 	"database/sql"
-	"github.com/go-cinch/common/log"
-	m "github.com/go-sql-driver/mysql"
-	migrate "github.com/rubenv/sql-migrate"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/go-cinch/common/log"
+	m "github.com/go-sql-driver/mysql"
+	migrate "github.com/rubenv/sql-migrate"
 )
 
 func Do(options ...func(*Options)) (err error) {
@@ -46,14 +47,13 @@ func Do(options ...func(*Options)) (err error) {
 		}
 		if lockAcquired {
 			break
-		} else {
-			log.
-				WithContext(ops.ctx).
-				WithFields(log.Fields{
-					"migrate.lock": ops.lockName,
-				}).
-				Info("cannot acquire advisory lock, retrying...")
 		}
+		log.
+			WithContext(ops.ctx).
+			WithFields(log.Fields{
+				"migrate.lock": ops.lockName,
+			}).
+			Info("cannot acquire advisory lock, retrying...")
 	}
 
 	if ops.before != nil {

@@ -2,7 +2,6 @@ package id
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 )
@@ -16,7 +15,7 @@ func TestNewSonyflake(t *testing.T) {
 		id1 := sf1.Id(context.Background())
 		id2 := sf2.Id(context.Background())
 		id3 := sf3.Id(context.Background())
-		fmt.Println(id1, id2, id3)
+		t.Log(id1, id2, id3)
 		i++
 	}
 }

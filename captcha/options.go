@@ -2,8 +2,9 @@ package captcha
 
 import (
 	"context"
-	"github.com/redis/go-redis/v9"
 	"reflect"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type Options struct {

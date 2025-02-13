@@ -2,12 +2,13 @@ package rabbit
 
 import (
 	"context"
+	"sync/atomic"
+	"time"
+
 	"github.com/go-cinch/common/log"
 	"github.com/houseofcat/turbocookedrabbit/v2/pkg/tcr"
 	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
-	"sync/atomic"
-	"time"
 )
 
 type Consume struct {

@@ -1,8 +1,9 @@
 package log
 
 import (
-	"github.com/go-cinch/common/log"
 	"time"
+
+	"github.com/go-cinch/common/log"
 )
 
 type Options struct {

@@ -6,10 +6,10 @@ import (
 	"os"
 )
 
-// MachineId gen machineId from pod ip
+// MachineID gen machine ID from pod ip
 // need set status.podIP first
 // https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/
-func MachineId() (uint16, error) {
+func MachineID() (uint16, error) {
 	ipStr := os.Getenv("POD_IP")
 	if len(ipStr) == 0 {
 		return 0, fmt.Errorf("cannot get POD_IP")

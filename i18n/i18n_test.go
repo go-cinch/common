@@ -1,9 +1,9 @@
 package i18n
 
 import (
-	"fmt"
-	"golang.org/x/text/language"
 	"testing"
+
+	"golang.org/x/text/language"
 )
 
 // //go:embed locales
@@ -21,6 +21,6 @@ func TestNew(t *testing.T) {
 	// 3. add embed fs
 	// i.AddFs(fs)
 
-	fmt.Println(i.T("common.hello"))
-	fmt.Println(i.Select(language.Chinese).T("common.hello"))
+	t.Log(i.T("common.hello"))
+	t.Log(i.Select(language.Chinese).T("common.hello"))
 }

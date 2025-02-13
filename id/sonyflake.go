@@ -2,10 +2,11 @@ package id
 
 import (
 	"context"
+	"time"
+
 	"github.com/go-cinch/common/log"
 	"github.com/pkg/errors"
 	"github.com/sony/sonyflake"
-	"time"
 )
 
 type Sonyflake struct {
@@ -43,7 +44,7 @@ func NewSonyflake(options ...func(*SonyflakeOptions)) *Sonyflake {
 	return sf
 }
 
-func (s *Sonyflake) Id(ctx context.Context) (id uint64) {
+func (s *Sonyflake) ID(ctx context.Context) (id uint64) {
 	if s.Error != nil {
 		log.WithContext(ctx).WithError(s.Error).Warn(s.Error)
 		return

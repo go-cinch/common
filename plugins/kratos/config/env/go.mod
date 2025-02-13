@@ -4,7 +4,7 @@ go 1.20
 
 replace github.com/go-cinch/common/copierx => ../../../../copierx
 
-require github.com/go-cinch/common/copierx v1.0.3
+require github.com/go-cinch/common/copierx v1.0.4
 
 require (
 	github.com/golang-module/carbon/v2 v2.2.8 // indirect

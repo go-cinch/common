@@ -7,9 +7,9 @@ import (
 
 	"github.com/go-cinch/common/log"
 	"github.com/go-cinch/common/migrate"
-	"github.com/go-cinch/common/utils"
 	kratosLog "github.com/go-kratos/kratos/v2/log"
 	"github.com/go-sql-driver/mysql"
+	"github.com/samber/lo"
 	m "gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -36,7 +36,7 @@ func FromContext(ctx context.Context) (id string) {
 
 type Tenant struct {
 	ops       Options
-	tenantIds []string
+	tenantIDs []string
 	tenantDBs map[string]*gorm.DB
 }
 
@@ -45,18 +45,18 @@ func New(options ...func(*Options)) (*Tenant, error) {
 	for _, f := range options {
 		f(ops)
 	}
-	tenantIds := make([]string, 0, len(ops.dsn))
+	tenantIDs := make([]string, 0, len(ops.dsn))
 	for k := range ops.dsn {
-		if !utils.Contains(tenantIds, k) {
-			tenantIds = append(tenantIds, k)
+		if !lo.Contains(tenantIDs, k) {
+			tenantIDs = append(tenantIDs, k)
 		}
 	}
-	if len(tenantIds) == 0 {
+	if len(tenantIDs) == 0 {
 		return nil, errors.New("at least one tenant")
 	}
 	tenantDBs := make(map[string]*gorm.DB)
 	if ops.skipMigrate {
-		for _, id := range tenantIds {
+		for _, id := range tenantIDs {
 			dsn := ops.dsn[id]
 			showDsn := getShowDsn(dsn)
 			log.
@@ -79,13 +79,13 @@ func New(options ...func(*Options)) (*Tenant, error) {
 	}
 	return &Tenant{
 		ops:       *ops,
-		tenantIds: tenantIds,
+		tenantIDs: tenantIDs,
 		tenantDBs: tenantDBs,
 	}, nil
 }
 
 func (t *Tenant) Migrate() error {
-	for _, id := range t.tenantIds {
+	for _, id := range t.tenantIDs {
 		dsn := t.ops.dsn[id]
 		showDsn := getShowDsn(dsn)
 		log.
@@ -113,7 +113,7 @@ func (t *Tenant) DB(ctx context.Context) *gorm.DB {
 	v, ok := t.tenantDBs[id]
 	if !ok {
 		// invalid tenant id use default 0
-		v = t.tenantDBs[t.tenantIds[0]]
+		v = t.tenantDBs[t.tenantIDs[0]]
 	}
 	return v.Session(&gorm.Session{}).WithContext(ctx)
 }
@@ -123,10 +123,10 @@ func (t *Tenant) migrate(dsn string) (db *gorm.DB, err error) {
 	defer cancel()
 	err = migrate.Do(
 		migrate.WithCtx(ctx),
-		migrate.WithUri(dsn),
+		migrate.WithURI(dsn),
 		migrate.WithFs(t.ops.sqlFile),
 		migrate.WithFsRoot(t.ops.sqlRoot),
-		migrate.WithBefore(func(ctx context.Context) (err error) {
+		migrate.WithBefore(func(_ context.Context) (err error) {
 			db, err = gorm.Open(m.Open(dsn), t.ops.config)
 			if err != nil {
 				return
@@ -138,7 +138,7 @@ func (t *Tenant) migrate(dsn string) (db *gorm.DB, err error) {
 			if err != nil {
 				return
 			}
-			// SetMaxIdleConns sets the maximum number of connections in the idle connection pool.
+			// SetMaxIDleConns sets the maximum number of connections in the idle connection pool.
 			sqlDB.SetMaxIdleConns(t.ops.maxIdle)
 			// SetMaxOpenConns sets the maximum number of open connections to the database.
 			sqlDB.SetMaxOpenConns(t.ops.maxOpen)

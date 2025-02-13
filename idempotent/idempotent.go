@@ -2,10 +2,11 @@ package idempotent
 
 import (
 	"context"
-	"github.com/go-cinch/common/log"
-	"github.com/google/uuid"
 	"strings"
 	"time"
+
+	"github.com/go-cinch/common/log"
+	"github.com/google/uuid"
 )
 
 // redis lua script(read => delete => get delete flag)

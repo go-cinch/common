@@ -1,11 +1,12 @@
 package utils
 
 import (
-	"github.com/pkg/errors"
-	"github.com/redis/go-redis/v9"
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/pkg/errors"
+	"github.com/redis/go-redis/v9"
 )
 
 func ParseRedisURI(uri string) (client redis.UniversalClient, err error) {

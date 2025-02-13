@@ -1,9 +1,10 @@
 package captcha
 
 import (
-	"github.com/mojocn/base64Captcha"
 	"strings"
 	"time"
+
+	"github.com/mojocn/base64Captcha"
 )
 
 // redis lua script

@@ -8,7 +8,7 @@
 - `Id` - [id generator.](https://github.com/go-cinch/common/tree/master/id)
 - `Idempotent` - [api idempotent tool based on redis lua script.](https://github.com/go-cinch/common/tree/master/idempotent)
 - `Jwt` - [jwt token generator based on golang-jwt, used under cinch layout.](https://github.com/go-cinch/common/tree/master/jwt)
-- `Log` - [simple log wrapper based on kratos log.](https://github.com/go-cinch/common/tree/master/log)
+- `Log` - [simple log wrapper based on logrus.](https://github.com/go-cinch/common/tree/master/log)
 - `Middleware` 
   - `I18n` - [simple i18n middleware, used under cinch layout.](https://github.com/go-cinch/common/tree/master/middleware/i18n)
   - `Tenant` - simple `tenant` middleware, used under layout.
