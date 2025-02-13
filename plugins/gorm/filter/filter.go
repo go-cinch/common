@@ -7,16 +7,14 @@ type Filter interface {
 	GetByID(id uint64) gen.T
 	// SELECT * FROM @@table
 	// {{where}}
-	//   {{if val != ""}}
-	//     {{if strings.HasPrefix(val, "%") && strings.HasSuffix(val, "%")}}
-	//       @@col LIKE concat('%', TRIM(BOTH '%' FROM @val), '%')
-	//     {{else if strings.HasPrefix(val, "%")}}
-	//       @@col LIKE concat('%', TRIM(BOTH '%' FROM @val))
-	//     {{else if strings.HasSuffix(val, "%")}}
-	//       @@col LIKE concat(TRIM(BOTH '%' FROM @val), '%')
-	//     {{else}}
-	//       @@col = @val
-	//     {{end}}
+	//   {{if strings.HasPrefix(val, "%") && strings.HasSuffix(val, "%")}}
+	//     @@col LIKE concat('%', TRIM(BOTH '%' FROM @val), '%')
+	//   {{else if strings.HasPrefix(val, "%")}}
+	//     @@col LIKE concat('%', TRIM(BOTH '%' FROM @val))
+	//   {{else if strings.HasSuffix(val, "%")}}
+	//     @@col LIKE concat(TRIM(BOTH '%' FROM @val), '%')
+	//   {{else}}
+	//     @@col = @val
 	//   {{end}}
 	// {{end}}
 	// LIMIT 1
