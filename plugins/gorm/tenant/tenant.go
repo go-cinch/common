@@ -3,14 +3,17 @@ package tenant
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-cinch/common/log"
-	"github.com/go-cinch/common/migrate"
+	migrate "github.com/go-cinch/common/migrate/v2"
 	kratosLog "github.com/go-kratos/kratos/v2/log"
 	"github.com/go-sql-driver/mysql"
 	"github.com/samber/lo"
-	m "gorm.io/driver/mysql"
+	mysqlDriver "gorm.io/driver/mysql"
+	postgresDriver "gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
@@ -58,11 +61,11 @@ func New(options ...func(*Options)) (*Tenant, error) {
 	if ops.skipMigrate {
 		for _, id := range tenantIDs {
 			dsn := ops.dsn[id]
-			showDsn := getShowDsn(dsn)
+			showDsn := getShowDsn(ops.driver, dsn)
 			log.
 				WithField("id", id).
 				Info("tenant open db...")
-			db, err := gorm.Open(m.Open(dsn), ops.config)
+			db, err := openDB(ops.driver, dsn, ops.config)
 			if err != nil {
 				log.
 					WithField("id", id).
@@ -87,7 +90,7 @@ func New(options ...func(*Options)) (*Tenant, error) {
 func (t *Tenant) Migrate() error {
 	for _, id := range t.tenantIDs {
 		dsn := t.ops.dsn[id]
-		showDsn := getShowDsn(dsn)
+		showDsn := getShowDsn(t.ops.driver, dsn)
 		log.
 			WithField("id", id).
 			Info("tenant migrating...")
@@ -123,11 +126,12 @@ func (t *Tenant) migrate(dsn string) (db *gorm.DB, err error) {
 	defer cancel()
 	err = migrate.Do(
 		migrate.WithCtx(ctx),
+		migrate.WithDriver(t.ops.driver),
 		migrate.WithURI(dsn),
 		migrate.WithFs(t.ops.sqlFile),
 		migrate.WithFsRoot(t.ops.sqlRoot),
 		migrate.WithBefore(func(_ context.Context) (err error) {
-			db, err = gorm.Open(m.Open(dsn), t.ops.config)
+			db, err = openDB(t.ops.driver, dsn, t.ops.config)
 			if err != nil {
 				return
 			}
@@ -150,12 +154,65 @@ func (t *Tenant) migrate(dsn string) (db *gorm.DB, err error) {
 	return
 }
 
-func getShowDsn(dsn string) string {
-	cfg, e := mysql.ParseDSN(dsn)
-	if e == nil {
-		// hidden password
-		cfg.Passwd = "***"
-		return cfg.FormatDSN()
+func openDB(driver, dsn string, config *gorm.Config) (*gorm.DB, error) {
+	switch driver {
+	case "mysql":
+		return gorm.Open(mysqlDriver.Open(dsn), config)
+	case "postgres":
+		return gorm.Open(postgresDriver.Open(dsn), config)
+	default:
+		return nil, fmt.Errorf("unsupported driver: %s", driver)
+	}
+}
+
+func getShowDsn(driver, dsn string) string {
+	switch driver {
+	case "mysql":
+		cfg, e := mysql.ParseDSN(dsn)
+		if e == nil {
+			// hidden password
+			cfg.Passwd = "***"
+			return cfg.FormatDSN()
+		}
+	case "postgres":
+		return hidePostgresPassword(dsn)
 	}
 	return ""
+}
+
+func hidePostgresPassword(dsn string) string {
+	// Handle URL format: postgres://user:password@host:port/dbname?params
+	if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
+		// Find password section
+		if idx := strings.Index(dsn, "://"); idx != -1 {
+			prefix := dsn[:idx+3]
+			rest := dsn[idx+3:]
+
+			// Find @ symbol
+			if atIdx := strings.Index(rest, "@"); atIdx != -1 {
+				userPass := rest[:atIdx]
+				hostAndRest := rest[atIdx:]
+
+				// Replace password
+				if colonIdx := strings.Index(userPass, ":"); colonIdx != -1 {
+					user := userPass[:colonIdx]
+					return prefix + user + ":***" + hostAndRest
+				}
+			}
+		}
+		return dsn
+	}
+
+	// Handle key=value format: host=localhost user=postgres password=secret dbname=test
+	pairs := strings.Fields(dsn)
+	result := make([]string, 0, len(pairs))
+	for _, pair := range pairs {
+		kv := strings.SplitN(pair, "=", 2)
+		if len(kv) == 2 && kv[0] == "password" {
+			result = append(result, "password=***")
+		} else {
+			result = append(result, pair)
+		}
+	}
+	return strings.Join(result, " ")
 }

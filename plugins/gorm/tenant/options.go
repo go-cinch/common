@@ -10,6 +10,7 @@ import (
 )
 
 type Options struct {
+	driver      string
 	dsn         map[string]string
 	sqlFile     embed.FS
 	sqlRoot     string
@@ -20,10 +21,19 @@ type Options struct {
 	skipMigrate bool
 }
 
+func WithDriver(driver string) func(*Options) {
+	return func(options *Options) {
+		if driver == "mysql" || driver == "postgres" {
+			getOptionsOrSetDefault(options).driver = driver
+		}
+	}
+}
+
 func WithDSN(tenant, dsn string) func(*Options) {
 	return func(options *Options) {
-		if getShowDsn(dsn) != "" {
-			data := getOptionsOrSetDefault(options)
+		data := getOptionsOrSetDefault(options)
+		// Validate DSN based on driver
+		if getShowDsn(data.driver, dsn) != "" {
 			if _, ok := data.dsn[tenant]; !ok {
 				data.dsn[tenant] = dsn
 			}
@@ -82,6 +92,7 @@ func WithSkipMigrate(flag bool) func(*Options) {
 func getOptionsOrSetDefault(options *Options) *Options {
 	if options == nil {
 		return &Options{
+			driver:  "postgres",
 			dsn:     make(map[string]string),
 			sqlRoot: "migrations",
 			config: &gorm.Config{
