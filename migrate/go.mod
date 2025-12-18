@@ -1,4 +1,4 @@
-module github.com/go-cinch/common/migrate
+module github.com/go-cinch/common/migrate/v2
 
 go 1.25
 
