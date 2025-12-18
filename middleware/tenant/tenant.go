@@ -3,7 +3,7 @@ package tenant
 import (
 	"context"
 
-	"github.com/go-cinch/common/plugins/gorm/tenant"
+	"github.com/go-cinch/common/plugins/gorm/tenant/v2"
 	"github.com/go-kratos/kratos/v2/middleware"
 	"github.com/go-kratos/kratos/v2/transport"
 )
