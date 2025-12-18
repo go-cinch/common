@@ -2,6 +2,8 @@
 
 db migration based on [sql-migrate](https://github.com/rubenv/sql-migrate), only use migrate.Up.
 
+Supports both **MySQL** and **PostgreSQL** databases.
+
 ## Usage
 
 ### sql files
@@ -47,6 +49,8 @@ EOF
 go get -u github.com/go-cinch/common/migrate
 ```
 
+#### MySQL Example
+
 ```go
 import (
 	"embed"
@@ -59,6 +63,7 @@ var db embed.FS
 
 func main() {
 	err := migrate.Do(
+		migrate.WithDriver("mysql"),
 		migrate.WithUri("root:root@tcp(127.0.0.1:3306)/test?parseTime=true"),
 		migrate.WithFs(db),
 		migrate.WithFsRoot("db"),
@@ -67,14 +72,61 @@ func main() {
 }
 ```
 
+#### PostgreSQL Example
+
+```go
+import (
+	"embed"
+	"fmt"
+	"github.com/go-cinch/common/migrate"
+)
+
+//go:embed db
+var db embed.FS
+
+func main() {
+	err := migrate.Do(
+		migrate.WithDriver("postgres"),
+		migrate.WithUri("host=localhost user=postgres password=postgres dbname=test port=5432 sslmode=disable"),
+		migrate.WithFs(db),
+		migrate.WithFsRoot("db"),
+	)
+	fmt.Println(err)
+}
+```
+
+Or using PostgreSQL URL format:
+
+```go
+err := migrate.Do(
+	migrate.WithDriver("postgres"),
+	migrate.WithUri("postgres://postgres:postgres@localhost:5432/test?sslmode=disable"),
+	migrate.WithFs(db),
+	migrate.WithFsRoot("db"),
+)
+```
+
 ## Options
 
 - `WithCtx` - context
-- `WithDriver` - database driver, default mysql
-- `WithUri` - database uri, if database not exist will auto create, default root:root@tcp(127.0.0.1:3306)
-  /test?charset=utf8mb4&parseTime=True&timeout=10000ms
-- `WithLockName` - lock name, will set unique lock before exec sql script, default MigrationLock
-- `WithChangeTable` - change history table name, default schema_migrations
+- `WithDriver` - database driver, supports `mysql` and `postgres`, default `mysql`
+- `WithUri` - database uri, if database not exist will auto create
+  - MySQL: `root:root@tcp(127.0.0.1:3306)/test?charset=utf8mb4&parseTime=True&timeout=10000ms`
+  - PostgreSQL (key=value format): `host=localhost user=postgres password=postgres dbname=test port=5432 sslmode=disable`
+  - PostgreSQL (URL format): `postgres://postgres:postgres@localhost:5432/test?sslmode=disable`
+- `WithLockName` - lock name, will set unique advisory lock before exec sql script, default `MigrationLock`
+  - MySQL uses `GET_LOCK()` / `RELEASE_LOCK()`
+  - PostgreSQL uses `pg_advisory_lock()` / `pg_advisory_unlock()`
+- `WithChangeTable` - change history table name, default `schema_migrations`
 - `WithBefore` - callback function, custom callback before exec sql script, after acquired migration lock
 - `WithFs` - embed files
 - `WithFsRoot` - embed root path
+
+## Features
+
+- **Auto Database Creation**: Automatically creates the database if it doesn't exist
+- **Advisory Locks**: Uses database-specific advisory locks to prevent concurrent migrations
+  - MySQL: Session-level locks with 5-second timeout
+  - PostgreSQL: Session-level advisory locks with immediate retry
+- **Migration Status**: Shows pending and applied migrations before execution
+- **Rollback Support**: Supports rollback via `SQL_MIGRATE_ROLLBACK` environment variable

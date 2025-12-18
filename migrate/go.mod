@@ -7,6 +7,7 @@ replace github.com/go-cinch/common/log => ../log
 require (
 	github.com/go-cinch/common/log v1.2.0
 	github.com/go-sql-driver/mysql v1.7.1
+	github.com/lib/pq v1.10.9
 	github.com/rubenv/sql-migrate v1.5.1
 )
 
