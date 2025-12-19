@@ -5,7 +5,7 @@ Simple pagination with [gorm](https://gorm.io/gorm) using Scopes pattern.
 ## Usage
 
 ```bash
-go get -u github.com/go-cinch/common/page
+go get -u github.com/go-cinch/common/page/v2
 ```
 
 ### Fields

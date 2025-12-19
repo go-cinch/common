@@ -1,4 +1,4 @@
-module github.com/go-cinch/common/page
+module github.com/go-cinch/common/page/v2
 
 go 1.25
 
