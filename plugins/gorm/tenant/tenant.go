@@ -65,7 +65,7 @@ func New(options ...func(*Options)) (*Tenant, error) {
 			log.
 				WithField("id", id).
 				Info("tenant open db...")
-			db, err := openDB(ops.driver, dsn, ops.config)
+			db, err := openDBWithPool(ops, dsn)
 			if err != nil {
 				log.
 					WithField("id", id).
@@ -88,6 +88,9 @@ func New(options ...func(*Options)) (*Tenant, error) {
 }
 
 func (t *Tenant) Migrate() error {
+	if t.ops.skipMigrate {
+		return nil
+	}
 	for _, id := range t.tenantIDs {
 		dsn := t.ops.dsn[id]
 		showDsn := getShowDsn(t.ops.driver, dsn)
@@ -131,23 +134,7 @@ func (t *Tenant) migrate(dsn string) (db *gorm.DB, err error) {
 		migrate.WithFs(t.ops.sqlFile),
 		migrate.WithFsRoot(t.ops.sqlRoot),
 		migrate.WithBefore(func(_ context.Context) (err error) {
-			db, err = openDB(t.ops.driver, dsn, t.ops.config)
-			if err != nil {
-				return
-			}
-			// fix: packets.go:122: closing bad idle connection: EOF
-			// https://gorm.io/docs/generic_interface.html#Connection-Pool
-			// Get generic database object sql.DB to use its functions
-			sqlDB, err := db.DB()
-			if err != nil {
-				return
-			}
-			// SetMaxIDleConns sets the maximum number of connections in the idle connection pool.
-			sqlDB.SetMaxIdleConns(t.ops.maxIdle)
-			// SetMaxOpenConns sets the maximum number of open connections to the database.
-			sqlDB.SetMaxOpenConns(t.ops.maxOpen)
-			// SetConnMaxLifetime sets the maximum amount of time a connection may be reused.
-			sqlDB.SetConnMaxLifetime(t.ops.maxLifetime)
+			db, err = openDBWithPool(&t.ops, dsn)
 			return
 		}),
 	)
@@ -163,6 +150,27 @@ func openDB(driver, dsn string, config *gorm.Config) (*gorm.DB, error) {
 	default:
 		return nil, fmt.Errorf("unsupported driver: %s", driver)
 	}
+}
+
+func openDBWithPool(ops *Options, dsn string) (*gorm.DB, error) {
+	db, err := openDB(ops.driver, dsn, ops.config)
+	if err != nil {
+		return nil, err
+	}
+	// fix: packets.go:122: closing bad idle connection: EOF
+	// https://gorm.io/docs/generic_interface.html#Connection-Pool
+	// Get generic database object sql.DB to use its functions
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	// SetMaxIdleConns sets the maximum number of connections in the idle connection pool.
+	sqlDB.SetMaxIdleConns(ops.maxIdle)
+	// SetMaxOpenConns sets the maximum number of open connections to the database.
+	sqlDB.SetMaxOpenConns(ops.maxOpen)
+	// SetConnMaxLifetime sets the maximum amount of time a connection may be reused.
+	sqlDB.SetConnMaxLifetime(ops.maxLifetime)
+	return db, nil
 }
 
 func getShowDsn(driver, dsn string) string {
