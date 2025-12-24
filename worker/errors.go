@@ -9,4 +9,5 @@ var (
 	ErrExprInvalid                   = fmt.Errorf("expr is invalid")
 	ErrSaveCron                      = fmt.Errorf("save cron failed")
 	ErrHTTPCallbackInvalidStatusCode = fmt.Errorf("http callback invalid status code")
+	ErrCronTaskNotFound              = fmt.Errorf("cron task not found")
 )

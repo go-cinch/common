@@ -38,15 +38,16 @@ type Worker struct {
 }
 
 type periodTask struct {
-	Expr            string `json:"expr"` // cron expr github.com/gorhill/cronexpr
-	Group           string `json:"group"`
-	UID             string `json:"uid"`
-	Payload         string `json:"payload"`
-	Next            int64  `json:"next"`      // next schedule unix timestamp
-	Processed       int64  `json:"processed"` // run times
-	MaxRetry        int    `json:"maxRetry"`
-	MaxArchivedTime int    `json:"maxArchivedTime"`
-	Timeout         int    `json:"timeout"`
+	Exprs           []string `json:"exprs"`         // multiple cron expressions
+	OriginalExprs   []string `json:"originalExprs"` // original cron exprs for restore
+	Group           string   `json:"group"`
+	UID             string   `json:"uid"`
+	Payload         string   `json:"payload"`
+	Next            int64    `json:"next"`      // next schedule unix timestamp
+	Processed       int64    `json:"processed"` // run times
+	MaxRetry        int      `json:"maxRetry"`
+	MaxArchivedTime int      `json:"maxArchivedTime"`
+	Timeout         int      `json:"timeout"`
 }
 
 func (p *periodTask) String() (str string) {
@@ -209,27 +210,7 @@ func New(options ...func(*Options)) (tk *Worker) {
 	inspector := asynq.NewInspector(rs)
 	// initialize redis lock
 	locker := redislock.New(rds)
-	// initialize server
-	srv := asynq.NewServer(
-		rs,
-		asynq.Config{
-			Concurrency: 10,
-			Queues: map[string]int{
-				ops.group: 10,
-			},
-			RetryDelayFunc:           ops.retryDelayFunc,
-			DelayedTaskCheckInterval: ops.delayedTaskCheckInterval,
-			Logger:                   myLogger{},
-			LogLevel:                 levelToAsynq(ops.logLevel),
-		},
-	)
-	go func() {
-		var h periodTaskHandler
-		h.tk = *tk
-		if e := srv.Run(h); e != nil {
-			log.WithError(err).Error("run task handler failed")
-		}
-	}()
+	// initialize basic fields first
 	tk.ops = *ops
 	tk.redis = rds
 	tk.redisOpt = rs
@@ -275,6 +256,27 @@ func New(options ...func(*Options)) (tk *Worker) {
 				continue
 			}
 			time.Sleep(3 * time.Second)
+		}
+	}()
+	// initialize server after stream is set
+	srv := asynq.NewServer(
+		rs,
+		asynq.Config{
+			Concurrency: 10,
+			Queues: map[string]int{
+				ops.group: 10,
+			},
+			RetryDelayFunc:           ops.retryDelayFunc,
+			DelayedTaskCheckInterval: ops.delayedTaskCheckInterval,
+			Logger:                   myLogger{},
+			LogLevel:                 levelToAsynq(ops.logLevel),
+		},
+	)
+	go func() {
+		var h periodTaskHandler
+		h.tk = *tk
+		if e := srv.Run(h); e != nil {
+			log.WithError(err).Error("run task handler failed")
 		}
 	}()
 	return
@@ -423,8 +425,21 @@ func (wk Worker) Cron(ctx context.Context, options ...func(*RunOptions)) (err er
 		err = errors.WithStack(ErrUUIDNil)
 		return
 	}
+
+	// Get expressions from options
+	exprs := ops.exprs
+	if len(exprs) == 0 {
+		err = errors.WithStack(ErrExprInvalid)
+		return
+	}
+
+	// Validate expressions for duplicates/conflicts
+	if err = validateExprs(exprs); err != nil {
+		return
+	}
+
 	var next int64
-	next, _, err = getNext(ops.expr, 0)
+	next, _, err = getNextMulti(exprs, 0)
 	if err != nil {
 		err = errors.WithStack(ErrExprInvalid)
 		return
@@ -436,15 +451,39 @@ func (wk Worker) Cron(ctx context.Context, options ...func(*RunOptions)) (err er
 	defer func() {
 		_ = lock.Release(ctx)
 	}()
-	t := periodTask{
-		Expr:     ops.expr,
-		Group:    strings.Join([]string{ops.group, "cron"}, "."),
-		UID:      ops.uid,
-		Payload:  ops.payload,
-		Next:     next,
-		MaxRetry: ops.maxRetry,
-		Timeout:  ops.timeout,
+	// check if the task has been dynamically modified
+	// if OriginalExprs is set and matches the configured exprs, skip overwriting
+	existingTask, e := wk.redis.HGet(ctx, wk.ops.redisPeriodKey, ops.uid).Result()
+	if e == nil {
+		var existing periodTask
+		existing.FromString(existingTask)
+
+		// Check if task was dynamically modified
+		if len(existing.OriginalExprs) > 0 {
+			// Compare arrays
+			if exprsEqual(existing.OriginalExprs, exprs) && !exprsEqual(existing.Exprs, exprs) {
+				log.WithContext(ctx).WithFields(log.Fields{
+					"uid":           ops.uid,
+					"originalExprs": existing.OriginalExprs,
+					"currentExprs":  existing.Exprs,
+					"configExprs":   exprs,
+				}).Info("skip overwriting cron task: task has been dynamically modified")
+				return
+			}
+		}
 	}
+
+	t := periodTask{
+		Exprs:         exprs,
+		OriginalExprs: nil, // empty on creation, set by UpdateCronExpr on first modification
+		Group:         strings.Join([]string{ops.group, "cron"}, "."),
+		UID:           ops.uid,
+		Payload:       ops.payload,
+		Next:          next,
+		MaxRetry:      ops.maxRetry,
+		Timeout:       ops.timeout,
+	}
+
 	// remove old task
 	_ = wk.Remove(context.Background(), t.UID)
 	_, err = wk.redis.HSet(ctx, wk.ops.redisPeriodKey, ops.uid, t.String()).Result()
@@ -460,6 +499,170 @@ func (wk Worker) Remove(ctx context.Context, uid string) (err error) {
 	err = wk.inspector.DeleteTask(wk.ops.group, uid)
 	return
 }
+
+// UpdateCronExpr dynamically updates the cron expression(s) for an existing cron task.
+// Supports both single and multiple expressions.
+// The original expressions are preserved for later restoration.
+//
+// uid: unique identifier of the cron task
+// newExpr: new cron expression(s) to apply (can pass one or more expressions)
+func (wk Worker) UpdateCronExpr(ctx context.Context, uid string, newExpr ...string) (err error) {
+	if uid == "" {
+		err = errors.WithStack(ErrUUIDNil)
+		return
+	}
+
+	if len(newExpr) == 0 {
+		err = errors.WithStack(ErrExprInvalid)
+		return
+	}
+
+	// Validate the new expressions
+	if err = validateExprs(newExpr); err != nil {
+		return
+	}
+
+	// Calculate next execution time for new expressions
+	newNext, _, newInterval, err := getNextFromExprs(newExpr, 0)
+	if err != nil {
+		err = errors.WithStack(ErrExprInvalid)
+		return
+	}
+
+	// acquire lock to prevent concurrent modifications
+	lock, err := wk.lock(ctx, uid, RunOptions{
+		lockerTTL:           wk.ops.lockerTTL,
+		lockerRetryCount:    wk.ops.lockerRetryCount,
+		lockerRetryInterval: wk.ops.lockerRetryInterval,
+	})
+	if err != nil {
+		return
+	}
+	defer func() {
+		_ = lock.Release(ctx)
+	}()
+
+	// retrieve existing task from redis
+	t, err := wk.redis.HGet(ctx, wk.ops.redisPeriodKey, uid).Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			err = errors.WithStack(ErrCronTaskNotFound)
+		}
+		return
+	}
+
+	var task periodTask
+	task.FromString(t)
+
+	// skip if newExpr is the same as current running exprs
+	if exprsEqual(task.Exprs, newExpr) {
+		log.WithContext(ctx).WithFields(log.Fields{
+			"uid":   uid,
+			"exprs": newExpr,
+		}).Info("skip updating cron task: exprs are already the same")
+		return
+	}
+
+	// preserve original expressions on first modification
+	if len(task.OriginalExprs) == 0 {
+		task.OriginalExprs = task.Exprs
+	}
+
+	// calculate old expression interval
+	oldNext, _, oldInterval, _ := getNextFromExprs(task.Exprs, 0)
+
+	// determine next execution time based on interval comparison
+	var next int64
+	if newInterval > oldInterval {
+		// delay task: newExpr interval > oldExpr interval
+		if newNext <= oldNext {
+			// newExpr.next is before or equal to oldExpr.next, use newExpr.next.next
+			next = newNext + newInterval
+		} else {
+			// newExpr.next is after oldExpr.next, use newExpr.next
+			next = newNext
+		}
+	} else {
+		// advance task or same interval: use newExpr.next
+		next = newNext
+	}
+
+	// apply the new expressions
+	task.Exprs = newExpr
+	task.Next = next
+
+	// remove queued task to allow rescheduling with new expression
+	_ = wk.inspector.DeleteTask(wk.ops.group, uid)
+
+	// persist changes to redis
+	_, err = wk.redis.HSet(ctx, wk.ops.redisPeriodKey, uid, task.String()).Result()
+	if err != nil {
+		err = errors.WithStack(ErrSaveCron)
+		return
+	}
+	return
+}
+
+// RestoreCronExpr restores the cron expression to its original value.
+// This reverses any changes made by UpdateCronExpr.
+// uid: unique identifier of the cron task
+func (wk Worker) RestoreCronExpr(ctx context.Context, uid string) (err error) {
+	if uid == "" {
+		err = errors.WithStack(ErrUUIDNil)
+		return
+	}
+	// acquire lock to prevent concurrent modifications
+	lock, err := wk.lock(ctx, uid, RunOptions{
+		lockerTTL:           wk.ops.lockerTTL,
+		lockerRetryCount:    wk.ops.lockerRetryCount,
+		lockerRetryInterval: wk.ops.lockerRetryInterval,
+	})
+	if err != nil {
+		return
+	}
+	defer func() {
+		_ = lock.Release(ctx)
+	}()
+	// retrieve existing task from redis
+	t, err := wk.redis.HGet(ctx, wk.ops.redisPeriodKey, uid).Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			err = errors.WithStack(ErrCronTaskNotFound)
+		}
+		return
+	}
+	var task periodTask
+	task.FromString(t)
+
+	// if no original expressions exist, nothing to restore
+	if len(task.OriginalExprs) == 0 {
+		return
+	}
+
+	// validate and calculate next execution time for original expressions
+	next, _, err := getNextMulti(task.OriginalExprs, 0)
+	if err != nil {
+		err = errors.WithStack(ErrExprInvalid)
+		return
+	}
+
+	// restore to original expressions
+	task.Exprs = task.OriginalExprs
+	task.OriginalExprs = nil // clear to indicate restored state
+	task.Next = next
+
+	// remove queued task to allow rescheduling with restored expression
+	_ = wk.inspector.DeleteTask(wk.ops.group, uid)
+
+	// persist changes to redis
+	_, err = wk.redis.HSet(ctx, wk.ops.redisPeriodKey, uid, task.String()).Result()
+	if err != nil {
+		err = errors.WithStack(ErrSaveCron)
+		return
+	}
+	return
+}
+
 
 func (wk Worker) processed(ctx context.Context, uid string) {
 	lock, err := wk.lock(ctx, strings.Join([]string{"processed", uid}, "."), RunOptions{
@@ -508,7 +711,14 @@ func (wk Worker) scan() {
 		if wk.hasTask(item.UID) {
 			continue
 		}
-		next, diff, _ := getNext(item.Expr, item.Next)
+
+		if len(item.Exprs) == 0 {
+			continue
+		}
+
+		// Calculate next execution time using multiple expressions if available
+		next, diff, _ := getNextMulti(item.Exprs, item.Next)
+
 		t := asynq.NewTask(item.Group, []byte(item.Payload), asynq.TaskID(item.UID))
 		taskOpts := []asynq.Option{
 			asynq.Queue(ops.group),
@@ -567,11 +777,14 @@ func (wk Worker) clearArchived() {
 			if e == nil || !errors.Is(e, redis.Nil) {
 				var task periodTask
 				task.FromString(t)
-				_, diff, _ := getNext(task.Expr, task.Next)
-				// default archived 1/2 task interval
-				archivedTime = int((diff) / 2)
-				if task.MaxArchivedTime > 0 {
-					archivedTime = task.MaxArchivedTime
+
+				if len(task.Exprs) > 0 {
+					_, diff, _ := getNextMulti(task.Exprs, task.Next)
+					// default archived 1/2 task interval
+					archivedTime = int((diff) / 2)
+					if task.MaxArchivedTime > 0 {
+						archivedTime = task.MaxArchivedTime
+					}
 				}
 			}
 		} else {
@@ -685,5 +898,160 @@ func getNext(expr string, timestamp int64) (end, diff int64, err error) {
 	}
 	// calc diff
 	diff = end - start
+	return
+}
+
+// getNextMulti is a wrapper that handles both single and multiple expressions
+// For backward compatibility with existing code
+func getNextMulti(exprs []string, timestamp int64) (end, diff int64, err error) {
+	if len(exprs) == 0 {
+		err = errors.WithStack(ErrExprInvalid)
+		return
+	}
+
+	if len(exprs) == 1 {
+		// Single expression - use original logic
+		return getNext(exprs[0], timestamp)
+	}
+
+	// Multiple expressions - find nearest next time
+	var matchedExpr string
+	var interval int64
+	end, matchedExpr, interval, err = getNextFromExprs(exprs, timestamp)
+	if err != nil {
+		return
+	}
+
+	now := carbon.Now()
+	nowTimestamp := now.Timestamp()
+	start := nowTimestamp
+	if timestamp > 0 {
+		start = timestamp
+	}
+
+	// Calculate diff
+	diff = end - start
+	if diff < 0 {
+		diff = interval
+	}
+
+	_ = matchedExpr // used for debugging if needed
+	return
+}
+
+// exprsEqual compares two string slices for equality
+func exprsEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// validateExprs validates that cron expressions don't have duplicates or conflicts
+// Returns error if validation fails
+func validateExprs(exprs []string) error {
+	if len(exprs) == 0 {
+		return errors.WithStack(ErrExprInvalid)
+	}
+
+	// Parse all expressions first to validate syntax
+	parsedExprs := make([]*cronexpr.Expression, 0, len(exprs))
+	for _, expr := range exprs {
+		e, err := cronexpr.Parse(expr)
+		if err != nil {
+			return errors.WithStack(ErrExprInvalid)
+		}
+		parsedExprs = append(parsedExprs, e)
+	}
+
+	// Check for duplicate next execution times
+	// We'll check the next 100 execution times for each expression
+	now := carbon.Now().StdTime()
+	executionTimes := make(map[int64]string) // timestamp -> expr
+
+	for i, e := range parsedExprs {
+		t := now
+		for j := 0; j < 100; j++ {
+			next := e.Next(t)
+			nextUnix := next.Unix()
+
+			if existingExpr, exists := executionTimes[nextUnix]; exists {
+				// Found duplicate execution time
+				return errors.Errorf("duplicate execution time detected: expr[%d]='%s' and expr='%s' both execute at %s",
+					i, exprs[i], existingExpr, next.Format("2006-01-02 15:04:05"))
+			}
+			executionTimes[nextUnix] = exprs[i]
+			t = next
+		}
+	}
+
+	return nil
+}
+
+// getNextFromExprs finds the nearest next execution time from multiple cron expressions
+// Returns the next execution time, the expression that produces it, and the interval
+func getNextFromExprs(exprs []string, timestamp int64) (next int64, matchedExpr string, interval int64, err error) {
+	if len(exprs) == 0 {
+		err = errors.WithStack(ErrExprInvalid)
+		return
+	}
+
+	now := carbon.Now()
+	nowTimestamp := now.Timestamp()
+	baseTime := now.StdTime()
+	start := nowTimestamp
+
+	if timestamp > 0 {
+		baseTime = carbon.CreateFromTimestamp(timestamp).StdTime()
+		start = timestamp
+	}
+
+	var minNext int64 = 0
+	var minExpr string
+	var minInterval int64 = 0
+
+	// Iterate through all expressions to find the nearest next time
+	for _, expr := range exprs {
+		e, parseErr := cronexpr.Parse(expr)
+		if parseErr != nil {
+			err = parseErr
+			return
+		}
+
+		nextTime := e.Next(baseTime)
+		nextUnix := nextTime.Unix()
+
+		// If time has expired, use current time
+		if nextUnix < nowTimestamp {
+			nextTime = e.Next(now.StdTime())
+			nextUnix = nextTime.Unix()
+		}
+
+		// Calculate interval for this expression
+		secondNext := e.Next(nextTime)
+		exprInterval := secondNext.Unix() - nextUnix
+
+		// Find the minimum (earliest) next time
+		if minNext == 0 || nextUnix < minNext {
+			minNext = nextUnix
+			minExpr = expr
+			minInterval = exprInterval
+		}
+	}
+
+	next = minNext
+	matchedExpr = minExpr
+	interval = minInterval
+
+	// Recalculate diff based on start time
+	if next < start {
+		next = minNext
+	}
+
 	return
 }

@@ -2,7 +2,6 @@ package worker
 
 import (
 	"context"
-	"reflect"
 	"time"
 
 	"github.com/go-cinch/common/log"
@@ -204,7 +203,7 @@ type RunOptions struct {
 	uid                 string
 	group               string
 	payload             string
-	expr                string         // only period task, seconds expr: */30 * * * * * *, minutes expr: 0 */5 * * * * *
+	exprs               []string       // only period task, multiple cron expressions
 	in                  *time.Duration // only once task
 	at                  *time.Time     // only once task
 	now                 bool           // only once task
@@ -236,9 +235,9 @@ func WithRunPayload(s string) func(*RunOptions) {
 	}
 }
 
-func WithRunExpr(s string) func(*RunOptions) {
+func WithRunExpr(exprs ...string) func(*RunOptions) {
 	return func(options *RunOptions) {
-		getRunOptionsOrSetDefault(options).expr = s
+		getRunOptionsOrSetDefault(options).exprs = exprs
 	}
 }
 
@@ -328,12 +327,4 @@ func getRunOptionsOrSetDefault(options *RunOptions) *RunOptions {
 		}
 	}
 	return options
-}
-
-func interfaceIsNil(i interface{}) bool {
-	v := reflect.ValueOf(i)
-	if v.Kind() == reflect.Ptr {
-		return v.IsNil()
-	}
-	return i == nil
 }
