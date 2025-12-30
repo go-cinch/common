@@ -496,7 +496,14 @@ func (wk Worker) Cron(ctx context.Context, options ...func(*RunOptions)) (err er
 
 func (wk Worker) Remove(ctx context.Context, uid string) (err error) {
 	wk.redis.HDel(ctx, wk.ops.redisPeriodKey, uid)
-	err = wk.inspector.DeleteTask(wk.ops.group, uid)
+	e1 := wk.inspector.CancelProcessing(uid)
+	if e1 != nil {
+		log.WithContext(ctx).Warn("cancel processing failed: %v", e1)
+	}
+	e2 := wk.inspector.DeleteTask(wk.ops.group, uid)
+	if e2 != nil {
+		log.WithContext(ctx).Warn("delete task failed: %v", e2)
+	}
 	return
 }
 

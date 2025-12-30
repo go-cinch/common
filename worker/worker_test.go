@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-cinch/common/log"
 	"github.com/google/uuid"
 )
 
@@ -572,4 +573,99 @@ func TestCronSingleAndMultipleExpressions(t *testing.T) {
 	}
 
 	t.Log("\n========== Test Complete ==========")
+}
+
+// TestRemoveCancelsSlowTask verifies that calling Remove on a running task
+// sends a cancel signal to the task's context.
+func TestRemoveCancelsSlowTask(t *testing.T) {
+	ctx := context.Background()
+	uid := "test-cancel-slow-task-" + uuid.NewString()
+
+	startedCh := make(chan struct{}, 1)
+	cancelledCh := make(chan struct{}, 1)
+	doneCh := make(chan struct{}, 1)
+
+	wk := New(
+		WithRedisURI("redis://127.0.0.1:6379/0"),
+		WithGroup("test.cancel"),
+		WithHandlerNeedWorker(func(ctx context.Context, worker Worker, p Payload) error {
+			// mark that task processing has started (this worker is dedicated to this test)
+			select {
+			case startedCh <- struct{}{}:
+			default:
+			}
+
+			log.Info("task is running")
+			// simulate a long-running task that is sensitive to context cancellation
+			select {
+			case <-ctx.Done():
+				// notify test that we observed cancellation
+				select {
+				case cancelledCh <- struct{}{}:
+					log.Info("task detected context cancellation")
+				default:
+				}
+				return ctx.Err()
+			case <-time.After(30 * time.Second):
+				// if cancel doesn't happen, this branch would eventually fire
+				select {
+				case doneCh <- struct{}{}:
+				default:
+				}
+				return nil
+			}
+		}),
+	)
+	if wk.Error != nil {
+		t.Fatalf("failed to create worker: %v", wk.Error)
+	}
+
+	// ensure no leftover task with the same uid
+	_ = wk.Remove(ctx, uid)
+
+	// enqueue a once task that should start processing soon and run for a long time unless cancelled
+	err := wk.Once(
+		ctx,
+		WithRunUUID(uid),
+		WithRunGroup("test.cancel"),
+		WithRunPayload(`{"task":"slow"}`),
+		WithRunTimeout(60),
+		WithRunNow(true),
+	)
+	if err != nil {
+		t.Fatalf("failed to enqueue once task: %v", err)
+	}
+
+	// wait for handler to start processing the task
+	select {
+	case <-startedCh:
+		// ok
+	case <-time.After(60 * time.Second):
+		t.Fatalf("task did not start processing in time; ensure Redis is running on 127.0.0.1:6379")
+	}
+
+	log.Info("wait 5s send cancel signal")
+	time.Sleep(5 * time.Second)
+
+	// call Remove while the task is running to trigger CancelProcessing
+	removeCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	if err := wk.Remove(removeCtx, uid); err != nil {
+		t.Fatalf("Remove returned error: %v", err)
+	}
+
+	// verify that the task observed context cancellation instead of completing normally
+	select {
+	case <-cancelledCh:
+		// expected path: context was cancelled
+	case <-time.After(15 * time.Second):
+		t.Fatalf("task context was not cancelled within timeout after Remove")
+	}
+
+	// best-effort check that the normal-completion branch did not run
+	select {
+	case <-doneCh:
+		t.Fatalf("slow task completed normally instead of being cancelled")
+	default:
+	}
 }
