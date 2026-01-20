@@ -13,7 +13,7 @@ func ID() middleware.Middleware {
 		return func(ctx context.Context, req interface{}) (reply interface{}, err error) {
 			if span := trace.SpanContextFromContext(ctx); span.HasTraceID() {
 				if tr, ok := transport.FromServerContext(ctx); ok {
-					tr.ReplyHeader().Set("trace-id", span.TraceID().String())
+					tr.ReplyHeader().Set("x-trace-id", span.TraceID().String())
 				}
 			}
 			return handler(ctx, req)
