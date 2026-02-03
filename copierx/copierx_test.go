@@ -5,6 +5,7 @@ import (
 
 	"github.com/golang-module/carbon/v2"
 	"github.com/jinzhu/copier"
+	"github.com/shopspring/decimal"
 )
 
 func TestCarbonToString(t *testing.T) {
@@ -260,5 +261,222 @@ func TestCopyWithOptionPreservesExternalConverters(t *testing.T) {
 	}
 	if dst.CreateTime != now.ToDateTimeString() {
 		t.Errorf("expected %s, got %s", now.ToDateTimeString(), dst.CreateTime)
+	}
+}
+
+// Decimal tests
+func TestDecimalToString(t *testing.T) {
+	type Src struct {
+		Amount decimal.Decimal
+	}
+	type Dst struct {
+		Amount string
+	}
+
+	src := Src{Amount: decimal.NewFromFloat(123.45)}
+	var dst Dst
+
+	err := Copy(&dst, src)
+	if err != nil {
+		t.Fatalf("Copy failed: %v", err)
+	}
+	if dst.Amount != "123.45" {
+		t.Errorf("expected 123.45, got %s", dst.Amount)
+	}
+}
+
+func TestStringToDecimal(t *testing.T) {
+	type Src struct {
+		Amount string
+	}
+	type Dst struct {
+		Amount decimal.Decimal
+	}
+
+	src := Src{Amount: "123.45"}
+	var dst Dst
+
+	err := Copy(&dst, src)
+	if err != nil {
+		t.Fatalf("Copy failed: %v", err)
+	}
+	if !dst.Amount.Equal(decimal.NewFromFloat(123.45)) {
+		t.Errorf("expected 123.45, got %s", dst.Amount.String())
+	}
+}
+
+func TestPtrDecimalToPtrString(t *testing.T) {
+	type Src struct {
+		Amount *decimal.Decimal
+	}
+	type Dst struct {
+		Amount *string
+	}
+
+	d := decimal.NewFromFloat(123.45)
+	src := Src{Amount: &d}
+	var dst Dst
+
+	err := Copy(&dst, src)
+	if err != nil {
+		t.Fatalf("Copy failed: %v", err)
+	}
+	if dst.Amount == nil {
+		t.Fatal("expected non-nil Amount")
+	}
+	if *dst.Amount != "123.45" {
+		t.Errorf("expected 123.45, got %s", *dst.Amount)
+	}
+}
+
+func TestPtrStringToPtrDecimal(t *testing.T) {
+	type Src struct {
+		Amount *string
+	}
+	type Dst struct {
+		Amount *decimal.Decimal
+	}
+
+	s := "123.45"
+	src := Src{Amount: &s}
+	var dst Dst
+
+	err := Copy(&dst, src)
+	if err != nil {
+		t.Fatalf("Copy failed: %v", err)
+	}
+	if dst.Amount == nil {
+		t.Fatal("expected non-nil Amount")
+	}
+	if !dst.Amount.Equal(decimal.NewFromFloat(123.45)) {
+		t.Errorf("expected 123.45, got %s", dst.Amount.String())
+	}
+}
+
+func TestPtrDecimalToString(t *testing.T) {
+	type Src struct {
+		Amount *decimal.Decimal
+	}
+	type Dst struct {
+		Amount string
+	}
+
+	d := decimal.NewFromFloat(123.45)
+	src := Src{Amount: &d}
+	var dst Dst
+
+	err := Copy(&dst, src)
+	if err != nil {
+		t.Fatalf("Copy failed: %v", err)
+	}
+	if dst.Amount != "123.45" {
+		t.Errorf("expected 123.45, got %s", dst.Amount)
+	}
+}
+
+func TestDecimalToPtrString(t *testing.T) {
+	type Src struct {
+		Amount decimal.Decimal
+	}
+	type Dst struct {
+		Amount *string
+	}
+
+	src := Src{Amount: decimal.NewFromFloat(123.45)}
+	var dst Dst
+
+	err := Copy(&dst, src)
+	if err != nil {
+		t.Fatalf("Copy failed: %v", err)
+	}
+	if dst.Amount == nil {
+		t.Fatal("expected non-nil Amount")
+	}
+	if *dst.Amount != "123.45" {
+		t.Errorf("expected 123.45, got %s", *dst.Amount)
+	}
+}
+
+func TestPtrStringToDecimal(t *testing.T) {
+	type Src struct {
+		Amount *string
+	}
+	type Dst struct {
+		Amount decimal.Decimal
+	}
+
+	s := "123.45"
+	src := Src{Amount: &s}
+	var dst Dst
+
+	err := Copy(&dst, src)
+	if err != nil {
+		t.Fatalf("Copy failed: %v", err)
+	}
+	if !dst.Amount.Equal(decimal.NewFromFloat(123.45)) {
+		t.Errorf("expected 123.45, got %s", dst.Amount.String())
+	}
+}
+
+func TestStringToPtrDecimal(t *testing.T) {
+	type Src struct {
+		Amount string
+	}
+	type Dst struct {
+		Amount *decimal.Decimal
+	}
+
+	src := Src{Amount: "123.45"}
+	var dst Dst
+
+	err := Copy(&dst, src)
+	if err != nil {
+		t.Fatalf("Copy failed: %v", err)
+	}
+	if dst.Amount == nil {
+		t.Fatal("expected non-nil Amount")
+	}
+	if !dst.Amount.Equal(decimal.NewFromFloat(123.45)) {
+		t.Errorf("expected 123.45, got %s", dst.Amount.String())
+	}
+}
+
+func TestNilPtrDecimalToPtrString(t *testing.T) {
+	type Src struct {
+		Amount *decimal.Decimal
+	}
+	type Dst struct {
+		Amount *string
+	}
+
+	src := Src{Amount: nil}
+	var dst Dst
+
+	err := Copy(&dst, src)
+	if err != nil {
+		t.Fatalf("Copy failed: %v", err)
+	}
+	if dst.Amount != nil {
+		t.Errorf("expected nil, got %v", dst.Amount)
+	}
+}
+
+func TestNilPtrStringToPtrDecimal(t *testing.T) {
+	type Src struct {
+		Amount *string
+	}
+	type Dst struct {
+		Amount *decimal.Decimal
+	}
+
+	src := Src{Amount: nil}
+	var dst Dst
+
+	err := Copy(&dst, src)
+	if err != nil {
+		t.Fatalf("Copy failed: %v", err)
+	}
+	if dst.Amount != nil {
+		t.Errorf("expected nil, got %v", dst.Amount)
 	}
 }

@@ -3,6 +3,7 @@ package copierx
 import (
 	"github.com/golang-module/carbon/v2"
 	"github.com/jinzhu/copier"
+	"github.com/shopspring/decimal"
 )
 
 var (
@@ -70,6 +71,63 @@ var (
 			SrcType: copier.String,
 			DstType: &carbon.DateTime{},
 			Fn:      stringToPtrCarbonDateTime,
+		},
+	}
+	// Decimal converters
+	DecimalToString = []copier.TypeConverter{
+		{
+			SrcType: decimal.Decimal{},
+			DstType: copier.String,
+			Fn:      decimalToString,
+		},
+	}
+	StringToDecimal = []copier.TypeConverter{
+		{
+			SrcType: copier.String,
+			DstType: decimal.Decimal{},
+			Fn:      stringToDecimal,
+		},
+	}
+	PtrDecimalToPtrString = []copier.TypeConverter{
+		{
+			SrcType: &decimal.Decimal{},
+			DstType: new(string),
+			Fn:      ptrDecimalToPtrString,
+		},
+	}
+	PtrStringToPtrDecimal = []copier.TypeConverter{
+		{
+			SrcType: new(string),
+			DstType: &decimal.Decimal{},
+			Fn:      ptrStringToPtrDecimal,
+		},
+	}
+	PtrDecimalToString = []copier.TypeConverter{
+		{
+			SrcType: &decimal.Decimal{},
+			DstType: copier.String,
+			Fn:      ptrDecimalToStringFn,
+		},
+	}
+	DecimalToPtrString = []copier.TypeConverter{
+		{
+			SrcType: decimal.Decimal{},
+			DstType: new(string),
+			Fn:      decimalToPtrString,
+		},
+	}
+	PtrStringToDecimal = []copier.TypeConverter{
+		{
+			SrcType: new(string),
+			DstType: decimal.Decimal{},
+			Fn:      ptrStringToDecimalFn,
+		},
+	}
+	StringToPtrDecimal = []copier.TypeConverter{
+		{
+			SrcType: copier.String,
+			DstType: &decimal.Decimal{},
+			Fn:      stringToPtrDecimal,
 		},
 	}
 )
@@ -170,6 +228,89 @@ func stringToPtrCarbonDateTime(src interface{}) (rp interface{}, err error) {
 	return
 }
 
+// Decimal conversion functions
+func decimalToString(src interface{}) (rp interface{}, err error) {
+	rp = ""
+	if v, ok := src.(decimal.Decimal); ok {
+		rp = v.String()
+	}
+	return
+}
+
+func stringToDecimal(src interface{}) (rp interface{}, err error) {
+	rp = decimal.Decimal{}
+	if v, ok := src.(string); ok {
+		if v != "" {
+			rp, err = decimal.NewFromString(v)
+		}
+	}
+	return
+}
+
+func ptrDecimalToPtrString(src interface{}) (rp interface{}, err error) {
+	if v, ok := src.(*decimal.Decimal); ok {
+		if v != nil {
+			s := v.String()
+			rp = &s
+		}
+	}
+	return
+}
+
+func ptrStringToPtrDecimal(src interface{}) (rp interface{}, err error) {
+	if v, ok := src.(*string); ok {
+		if v != nil && *v != "" {
+			d, e := decimal.NewFromString(*v)
+			if e == nil {
+				rp = &d
+			}
+			err = e
+		}
+	}
+	return
+}
+
+func ptrDecimalToStringFn(src interface{}) (rp interface{}, err error) {
+	rp = ""
+	if v, ok := src.(*decimal.Decimal); ok {
+		if v != nil {
+			rp = v.String()
+		}
+	}
+	return
+}
+
+func decimalToPtrString(src interface{}) (rp interface{}, err error) {
+	if v, ok := src.(decimal.Decimal); ok {
+		s := v.String()
+		rp = &s
+	}
+	return
+}
+
+func ptrStringToDecimalFn(src interface{}) (rp interface{}, err error) {
+	rp = decimal.Decimal{}
+	if v, ok := src.(*string); ok {
+		if v != nil && *v != "" {
+			rp, err = decimal.NewFromString(*v)
+		}
+	}
+	return
+}
+
+func stringToPtrDecimal(src interface{}) (rp interface{}, err error) {
+	if v, ok := src.(string); ok {
+		if v != "" {
+			d, e := decimal.NewFromString(v)
+			if e == nil {
+				rp = &d
+			}
+			err = e
+		}
+	}
+	return
+}
+
 func allConverters() []copier.TypeConverter {
 	converters := make([]copier.TypeConverter, 0)
 	converters = append(converters, CarbonToString...)
@@ -180,6 +321,14 @@ func allConverters() []copier.TypeConverter {
 	converters = append(converters, CarbonToPtrString...)
 	converters = append(converters, PtrStringToCarbon...)
 	converters = append(converters, StringToPtrCarbon...)
+	converters = append(converters, DecimalToString...)
+	converters = append(converters, StringToDecimal...)
+	converters = append(converters, PtrDecimalToPtrString...)
+	converters = append(converters, PtrStringToPtrDecimal...)
+	converters = append(converters, PtrDecimalToString...)
+	converters = append(converters, DecimalToPtrString...)
+	converters = append(converters, PtrStringToDecimal...)
+	converters = append(converters, StringToPtrDecimal...)
 	return converters
 }
 
