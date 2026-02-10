@@ -72,11 +72,7 @@ func (m *Migrate) Migrate() error {
 	return nil
 }
 
-func (m *Migrate) DB() *gorm.DB {
-	return m.db.Session(&gorm.Session{})
-}
-
-func (m *Migrate) DBWithContext(ctx context.Context) *gorm.DB {
+func (m *Migrate) DB(ctx context.Context) *gorm.DB {
 	return m.db.Session(&gorm.Session{}).WithContext(ctx)
 }
 
