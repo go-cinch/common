@@ -10,7 +10,7 @@ replace (
 
 require (
 	github.com/go-cinch/common/log v1.2.0
-	github.com/go-cinch/common/migrate/v2 v2.0.1
+	github.com/go-cinch/common/migrate/v2 v2.0.2
 	github.com/go-cinch/common/plugins/gorm/log v1.0.5
 	github.com/go-sql-driver/mysql v1.8.1
 	gorm.io/driver/mysql v1.6.0
