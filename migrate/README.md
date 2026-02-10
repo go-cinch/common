@@ -114,19 +114,13 @@ err := migrate.Do(
   - MySQL: `root:root@tcp(127.0.0.1:3306)/test?charset=utf8mb4&parseTime=True&timeout=10000ms`
   - PostgreSQL (key=value format): `host=localhost user=postgres password=postgres dbname=test port=5432 sslmode=disable`
   - PostgreSQL (URL format): `postgres://postgres:postgres@localhost:5432/test?sslmode=disable`
-- `WithLockName` - lock name, will set unique advisory lock before exec sql script, default `MigrationLock`
-  - MySQL uses `GET_LOCK()` / `RELEASE_LOCK()`
-  - PostgreSQL uses `pg_advisory_lock()` / `pg_advisory_unlock()`
 - `WithChangeTable` - change history table name, default `schema_migrations`
-- `WithBefore` - callback function, custom callback before exec sql script, after acquired migration lock
+- `WithBefore` - callback function, custom callback before exec sql script
 - `WithFs` - embed files
 - `WithFsRoot` - embed root path
 
 ## Features
 
 - **Auto Database Creation**: Automatically creates the database if it doesn't exist
-- **Advisory Locks**: Uses database-specific advisory locks to prevent concurrent migrations
-  - MySQL: Session-level locks with 5-second timeout
-  - PostgreSQL: Session-level advisory locks with immediate retry
 - **Migration Status**: Shows pending and applied migrations before execution
 - **Rollback Support**: Supports rollback via `SQL_MIGRATE_ROLLBACK` environment variable

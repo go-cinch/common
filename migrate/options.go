@@ -10,7 +10,6 @@ type Options struct {
 	ctx         context.Context
 	driver      string
 	uri         string
-	lockName    string
 	before      func(ctx context.Context) error
 	changeTable string
 	fs          embed.FS
@@ -34,12 +33,6 @@ func WithDriver(s string) func(*Options) {
 func WithURI(s string) func(*Options) {
 	return func(options *Options) {
 		getOptionsOrSetDefault(options).uri = s
-	}
-}
-
-func WithLockName(s string) func(*Options) {
-	return func(options *Options) {
-		getOptionsOrSetDefault(options).lockName = s
 	}
 }
 
@@ -74,7 +67,6 @@ func getOptionsOrSetDefault(options *Options) *Options {
 		return &Options{
 			driver:      "mysql",
 			uri:         "root:root@tcp(127.0.0.1:3306)/test?charset=utf8mb4&parseTime=True&timeout=10000ms",
-			lockName:    "MigrationLock",
 			changeTable: "schema_migrations",
 		}
 	}
